@@ -63,12 +63,27 @@ def normalize_viewpower(work_info: dict, nominal_watts: float | None = None) -> 
     # gần 0 (không còn AC) và chữ "battery" ngay trong workMode.
     input_voltage = _num(work_info, "inputVoltage")
     work_mode_raw = (work_info.get("workMode") or "").lower()
-    discharge_curr = _num(work_info, "dischargeCurr") or 0
+    discharge_curr_raw = _num(work_info, "dischargeCurr")
+    discharge_curr = discharge_curr_raw or 0
+    battery_voltage = _num(work_info, "batteryVoltage")
     on_battery = (
         (input_voltage is not None and input_voltage < 50)
         or ("battery" in work_mode_raw)
         or (discharge_curr > 0)
     )
+
+    # Một số driver (vd: UPS Liebert này) không báo dischargeCurr (luôn rỗng).
+    # Khi đang xả ắc quy, ước tính I = P/(hiệu_suất×V) từ công suất đầu ra +
+    # điện áp ắc quy. INVERTER_EFFICIENCY là giả định (không phải số đo từ
+    # UPS — ViewPower không báo hiệu suất thực), dùng mức điển hình cho UPS
+    # online/double-conversion (~90%, chưa tính lệch theo % tải). Đánh dấu
+    # estimated=true để giao diện phân biệt rõ với số liệu đo trực tiếp.
+    INVERTER_EFFICIENCY = 0.9
+    discharge_current = discharge_curr_raw
+    discharge_current_estimated = False
+    if discharge_current is None and on_battery and load_watts and battery_voltage:
+        discharge_current = load_watts / (INVERTER_EFFICIENCY * battery_voltage)
+        discharge_current_estimated = True
 
     return {
         "ups": {
@@ -80,6 +95,8 @@ def normalize_viewpower(work_info: dict, nominal_watts: float | None = None) -> 
             "outputVoltage": _num(work_info, "outputVoltage"),
             "outputFrequency": _num(work_info, "outputFrequency"),
             "outputCurrent": _num(work_info, "outputCurrent"),
+            "dischargeCurrent": discharge_current,
+            "dischargeCurrentEstimated": discharge_current_estimated,
             "load": load_pct,
             "loadWatts": load_watts,
             "nominalWatts": nominal_watts,

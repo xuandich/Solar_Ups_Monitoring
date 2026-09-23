@@ -417,12 +417,13 @@ function renderUpsSection(device, liveData, chargerLiveData) {
             <div class="info-row"><span class="info-label">Output voltage</span><span class="info-value">${fmt(payload.outputVoltage, 1)}<span class="unit">V</span></span></div>
             <div class="info-row"><span class="info-label">Output frequency</span><span class="info-value">${fmt(payload.outputFrequency, 1)}<span class="unit">Hz</span></span></div>
             <div class="info-row"><span class="info-label">Load level</span><span class="info-value">${fmt(payload.load, 0)}<span class="unit">%</span></span></div>
-            <div class="info-row"><span class="info-label">Công suất tiêu thụ</span><span class="info-value">${fmt(payload.loadWatts, 0)}<span class="unit">W</span></span></div>
+            <div class="info-row"><span class="info-label">Power consumption</span><span class="info-value">${fmt(payload.loadWatts, 0)}<span class="unit">W</span></span></div>
             <div class="info-row"><span class="info-label">Current</span><span class="info-value">${fmt(payload.outputCurrent, 1)}<span class="unit">A</span></span></div>
           </div>
           <div class="area-battery info-panel battery-panel ${solarCharging ? "active" : ""}">
             <div class="info-title">Battery information</div>
             <div class="info-row"><span class="info-label">Battery voltage</span><span class="info-value">${fmt(payload.batteryVoltage, 1)}<span class="unit">V</span></span></div>
+            <div class="info-row"><span class="info-label">Discharge current${payload.dischargeCurrentEstimated ? " (estimated)" : ""}</span><span class="info-value">${payload.dischargeCurrentEstimated ? "≈" : ""}${fmt(payload.dischargeCurrent, 1)}<span class="unit">A</span></span></div>
             <div class="info-row"><span class="info-label">Battery capacity</span><span class="info-value">${fmt(payload.batteryCharge, 0)}<span class="unit">%</span></span></div>
             <div class="info-row"><span class="info-label">Remaining backup time</span><span class="info-value">${fmt(payload.batteryRuntimeMin, 0)}<span class="unit">Min</span></span></div>
           </div>
