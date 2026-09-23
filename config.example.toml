@@ -1,0 +1,64 @@
+# Copy file này thành config.toml rồi chỉnh sửa cho phù hợp.
+
+[server]
+host = "0.0.0.0"
+port = 8000
+
+[polling]
+# Tần suất POLL thiết bị — quyết định độ tươi của số liệu live (/api/status,
+# trang dashboard). Không quyết định tần suất ghi đĩa (xem raw_persist_interval_seconds).
+interval_seconds = 2
+retention_days = 30
+# Dữ liệu tổng hợp theo giờ/ngày dùng cho biểu đồ lịch sử (12h/ngày/tháng),
+# giữ lâu hơn nhiều so với retention_days mà không tốn dung lượng đáng kể
+# (~1-2 MB/thiết bị cho 6 tháng).
+chart_retention_days = 180
+# Tần suất LẤY MẪU để lưu (giây), độc lập với interval_seconds ở trên — RAM
+# vẫn cập nhật mỗi interval_seconds (số liệu live không đổi), chỉ số mẫu
+# được GIỮ LẠI để lưu bị hạ xuống mức này. Giảm khối lượng dữ liệu thô tích
+# luỹ (2 phút/lần ~ giảm 60x so với 2s/lần). Không ảnh hưởng biểu đồ
+# giờ/ngày/tháng (đã có bảng tổng hợp riêng).
+raw_persist_interval_seconds = 120
+# Các mẫu đã lấy ở trên lại được đệm trong RAM và ghi xuống đĩa theo lô mỗi
+# db_flush_interval_seconds (giây) thay vì ghi/fsync ngay từng mẫu — giảm
+# thêm số lần ghi đĩa (vd: 120s lấy mẫu + 600s flush ~ mỗi thiết bị chỉ thực
+# sự ghi đĩa 1 lần/10 phút, gộp ~5 mẫu/lần). Dừng êm (./stop.sh) luôn flush
+# hết phần đang đệm trước khi thoát — chỉ mất dữ liệu (tối đa khoảng thời
+# gian này) nếu tiến trình bị kill đột ngột (mất điện, kill -9).
+db_flush_interval_seconds = 600
+db_path = "mqsolar.db"
+# false = tắt hẳn việc lưu lịch sử xuống đĩa (không ghi readings, không
+# rollup giờ/ngày, không cleanup) — chỉ hiển thị số liệu live từ RAM. Dùng
+# tạm khi đang thử nghiệm/đổi nguồn dữ liệu, không muốn DB tích luỹ dữ liệu
+# rác. /api/history, /api/chart vẫn hoạt động nhưng luôn trả rỗng.
+storage_enabled = true
+
+# Khai báo mỗi thiết bị Local (MPPT Charger / Inverter) muốn theo dõi.
+# Có thể lặp lại khối [[local_devices]] này cho nhiều thiết bị.
+[[local_devices]]
+host = "192.168.1.50"
+name = "MPPT Charger"
+
+# [[local_devices]]
+# host = "192.168.1.51"
+# name = "Inverter"
+
+# Bỏ comment khối dưới nếu muốn theo dõi thiết bị qua Cloud thay vì / thêm vào Local.
+# Lấy token tại app Mạnh Quân Solar -> Cá nhân -> Kết nối bên thứ 3.
+# [cloud]
+# token = "your-api-token"
+# device_ids = ["device-id-1", "device-id-2"]
+
+# Theo dõi UPS qua server ViewPower (phần mềm giám sát UPS Vertiv/Liebert,
+# chạy trên Tomcat, mặc định port 15178). port_name lấy bằng cách mở trang
+# http://<host>:15178/ViewPower/monitor rồi xem giá trị mặc định trong
+# window.sessionStorage.getItem("portName") qua DevTools Console (thường là
+# "USBusbdev1" cho UPS nối qua USB). Không cần đăng nhập cho endpoint này.
+# [[viewpower_devices]]
+# port_name = "USBusbdev1"
+# host = "localhost"
+# port = 15178
+# name = "UPS Phòng Server"
+# ViewPower không báo công suất định mức (VA) — điền tay nếu biết (W) để
+# tính thêm loadWatts từ % load; bỏ trống thì chỉ hiện %.
+# nominal_watts = 800

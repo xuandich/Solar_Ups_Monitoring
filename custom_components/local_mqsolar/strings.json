@@ -1,0 +1,42 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mạnh Quân Solar",
+        "description": "Choose setup method",
+        "menu_options": {
+          "manual": "Enter IP Address manually",
+          "scan": "Scan local network",
+          "cloud": "Connect via Cloud"
+        }
+      },
+      "manual": {
+        "title": "Manual Setup",
+        "data": {
+          "host": "IP Address or Hostname"
+        }
+      },
+      "scan": {
+        "title": "Discovered Devices",
+        "data": {
+          "host": "Select Device"
+        }
+      },
+      "cloud": {
+        "title": "Cloud Setup",
+        "data": {
+          "token": "API Token",
+          "devices": "Device IDs (comma separated)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "no_devices_found": "No device found on local network"
+    },
+    "abort": {
+      "already_configured": "Device is already configured",
+      "no_devices_found": "No devices found on the network"
+    }
+  }
+}

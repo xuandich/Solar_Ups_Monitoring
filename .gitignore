@@ -1,0 +1,11 @@
+.idea
+.venv
+__pycache__/
+*.pyc
+config.toml
+mqsolar.db
+mqsolar.db-shm
+mqsolar.db-wal
+mqsolar.service
+mqsolar.pid
+mqsolar.log

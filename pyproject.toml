@@ -1,0 +1,13 @@
+[project]
+name = "ha-local-mqsolar"
+version = "0.1.0"
+description = "Standalone service theo dõi thiết bị Mạnh Quân Solar (MPPT/Inverter) qua REST API, chạy độc lập trên Ubuntu không cần Home Assistant"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.9",
+    "async-timeout>=4.0",
+    "aiosqlite>=0.20",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+]

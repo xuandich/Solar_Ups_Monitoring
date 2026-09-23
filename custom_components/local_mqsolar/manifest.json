@@ -1,0 +1,14 @@
+{
+  "domain": "local_mqsolar",
+  "name": "Mạnh Quân Solar",
+  "config_flow": true,
+  "documentation": "https://github.com/loctrantv/ha_local_mqsolar",
+  "issue_tracker": "https://github.com/loctrantv/ha_local_mqsolar/issues",
+  "dependencies": [],
+  "codeowners": [
+    "@loctrantv"
+  ],
+  "requirements": [],
+  "iot_class": "local_polling",
+  "version": "1.0.0"
+}

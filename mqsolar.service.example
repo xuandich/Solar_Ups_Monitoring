@@ -1,0 +1,15 @@
+[Unit]
+Description=MQ Solar Local Monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=xuandich
+WorkingDirectory=/home/xuandich/code_data/ha_local_mqsolar
+ExecStart=/home/xuandich/code_data/ha_local_mqsolar/.venv/bin/python main.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

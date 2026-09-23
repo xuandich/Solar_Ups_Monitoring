@@ -1,0 +1,42 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mạnh Quân Solar",
+        "description": "Chọn phương thức thêm thiết bị",
+        "menu_options": {
+          "manual": "Nhập IP thủ công",
+          "scan": "Quét mạng nội bộ",
+          "cloud": "Kết nối qua Cloud"
+        }
+      },
+      "manual": {
+        "title": "Nhập IP Thủ công",
+        "data": {
+          "host": "Địa chỉ IP hoặc Hostname"
+        }
+      },
+      "scan": {
+        "title": "Các thiết bị tìm thấy",
+        "data": {
+          "host": "Chọn thiết bị"
+        }
+      },
+      "cloud": {
+        "title": "Cài đặt Cloud",
+        "data": {
+          "token": "Mã Token API",
+          "devices": "Danh sách Device ID (cách nhau bởi dấu phẩy)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Không thể kết nối tới thiết bị",
+      "no_devices_found": "Không tìm thấy thiết bị nào trên mạng"
+    },
+    "abort": {
+      "already_configured": "Thiết bị này đã được thêm vào rồi",
+      "no_devices_found": "Không tìm thấy thiết bị nào trên mạng"
+    }
+  }
+}

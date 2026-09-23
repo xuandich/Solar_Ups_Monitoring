@@ -1,0 +1,42 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Manh Quan Solar",
+        "description": "Select a method to add a device",
+        "menu_options": {
+          "manual": "Enter IP manually",
+          "scan": "Scan local network",
+          "cloud": "Connect via Cloud"
+        }
+      },
+      "manual": {
+        "title": "Manual IP Entry",
+        "data": {
+          "host": "IP address or hostname"
+        }
+      },
+      "scan": {
+        "title": "Discovered Devices",
+        "data": {
+          "host": "Select device"
+        }
+      },
+      "cloud": {
+        "title": "Cloud Settings",
+        "data": {
+          "token": "API Token",
+          "devices": "List of Device IDs (comma-separated)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to the device",
+      "no_devices_found": "No devices found on the network"
+    },
+    "abort": {
+      "already_configured": "This device has already been added",
+      "no_devices_found": "No devices found on the network"
+    }
+  }
+}
