@@ -26,7 +26,9 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     padding: 16px;
   }
-  .wrap { max-width: 1100px; margin: 0 auto; }
+  /* +204px (190px cột KPI + 14px gap) để ô UPS vẫn giữ nguyên bề rộng ~1100px
+     như lúc cột KPI còn nằm ngang phía trên, thay vì bị cột KPI lấn vào. */
+  .wrap { max-width: 1304px; margin: 0 auto; }
 
   .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
   .topbar img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
@@ -34,10 +36,9 @@
   .topbar .sub { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
 
   .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 12px;
-    margin-bottom: 24px;
   }
   .kpi {
     background: linear-gradient(135deg, #182238, #101729);
@@ -60,7 +61,14 @@
   .badge.offline .dot { background: var(--red); }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.5); } 70% { box-shadow: 0 0 0 6px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
 
-  .top-row { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  /* Cột 4 ô KPI hẹp lại còn ~2/3 bề rộng gốc (trước đây nằm hàng ngang phía
+     trên, mỗi ô ~260-280px), đặt bên trái ô UPS thay vì phía trên. */
+  .top-row { display: grid; grid-template-columns: minmax(150px, 190px) 1fr; gap: 14px; align-items: start; }
+  @media (max-width: 900px) {
+    .top-row { grid-template-columns: 1fr; }
+    .kpi-grid { flex-direction: row; flex-wrap: wrap; }
+    .kpi-grid .kpi { flex: 1 1 180px; }
+  }
 
   /* --- Sơ đồ UPS đầy đủ ngay trên trang tổng quan (không cần vào trang
      chi tiết): Input - Rectifier - Inverter - Output + nhánh Battery + 4
@@ -196,26 +204,25 @@
     </div>
 
     <div id="content" style="display:none">
-      <div class="kpi-grid">
-        <div class="kpi" style="--accent:var(--amber)">
-          <div class="label">Tổng công suất hiện tại</div>
-          <div class="value"><span id="kpiPower">--</span><span class="unit">W</span></div>
-        </div>
-        <div class="kpi" style="--accent:var(--green)">
-          <div class="label">Điện năng hôm nay</div>
-          <div class="value"><span id="kpiToday">--</span><span class="unit">kWh</span></div>
-        </div>
-        <div class="kpi" style="--accent:var(--cyan)">
-          <div class="label">Điện năng tích luỹ</div>
-          <div class="value"><span id="kpiTotal">--</span><span class="unit">kWh</span></div>
-        </div>
-        <div class="kpi" style="--accent:var(--blue)">
-          <div class="label">Thiết bị online</div>
-          <div class="value"><span id="kpiOnline">--</span><span class="unit" id="kpiOnlineUnit"></span></div>
-        </div>
-      </div>
-
       <div class="top-row" id="topRow">
+        <div class="kpi-grid">
+          <div class="kpi" style="--accent:var(--amber)">
+            <div class="label">Tổng công suất hiện tại</div>
+            <div class="value"><span id="kpiPower">--</span><span class="unit">W</span></div>
+          </div>
+          <div class="kpi" style="--accent:var(--green)">
+            <div class="label">Điện năng hôm nay</div>
+            <div class="value"><span id="kpiToday">--</span><span class="unit">kWh</span></div>
+          </div>
+          <div class="kpi" style="--accent:var(--cyan)">
+            <div class="label">Điện năng tích luỹ</div>
+            <div class="value"><span id="kpiTotal">--</span><span class="unit">kWh</span></div>
+          </div>
+          <div class="kpi" style="--accent:var(--blue)">
+            <div class="label">Thiết bị online</div>
+            <div class="value"><span id="kpiOnline">--</span><span class="unit" id="kpiOnlineUnit"></span></div>
+          </div>
+        </div>
         <div id="upsSection"></div>
       </div>
     </div>
@@ -476,11 +483,10 @@ async function tick() {
   const chargerDevices = devices.filter(isCharger);
   const mpptDevice = chargerDevices[0]; // dùng để lấy dữ liệu sạc cho ô "Solar information" của UPS
 
-  const topRow = document.getElementById("topRow");
   document.getElementById("upsSection").innerHTML =
     upsDevices.map(d => renderUpsSection(d, statusMap[d.device_id], mpptDevice ? statusMap[mpptDevice.device_id] : null)).join("");
 
-  topRow.style.display = upsDevices.length ? "grid" : "none";
+  document.getElementById("upsSection").style.display = upsDevices.length ? "block" : "none";
 }
 
 tick();
