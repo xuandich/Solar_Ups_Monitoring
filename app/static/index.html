@@ -52,26 +52,6 @@
   .kpi .value { font-size: 28px; font-weight: 800; margin-top: 6px; }
   .kpi .unit { font-size: 14px; color: var(--text-dim); font-weight: 600; margin-left: 4px; }
 
-  h2.section-title { font-size: 14px; color: var(--text-dim); font-weight: 600; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .04em; }
-
-  .device-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
-  a.device-card {
-    display: block;
-    background: var(--card);
-    border: 1px solid var(--card-border);
-    border-radius: 14px;
-    padding: 16px 18px;
-    text-decoration: none;
-    color: var(--text);
-    transition: border-color .15s;
-  }
-  a.device-card:hover { border-color: var(--green); }
-  a.device-card.offline { opacity: .55; }
-
-  .device-card .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-  .device-card .name { font-weight: 700; font-size: 15px; }
-  .device-card .id { color: var(--text-dim); font-size: 12px; margin-top: 2px; }
-
   .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
   .badge .dot { width: 7px; height: 7px; border-radius: 50%; }
   .badge.online { background: rgba(34,197,94,.12); color: var(--green); }
@@ -80,66 +60,7 @@
   .badge.offline .dot { background: var(--red); }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.5); } 70% { box-shadow: 0 0 0 6px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
 
-  .device-card .power { font-size: 26px; font-weight: 800; margin-top: 10px; }
-  .device-card .power .unit { font-size: 13px; color: var(--text-dim); font-weight: 600; margin-left: 4px; }
-  .device-card .power-label { color: var(--text-dim); font-size: 12px; }
-
-  .device-card .power-row { display: flex; gap: 16px; margin-top: 10px; align-items: stretch; }
-  .device-card .power-row .power-col { flex: 1; min-width: 0; }
-  .device-card .power-row .power-col.align-right { text-align: right; }
-  .device-card .power-row .power-col .power-label { color: var(--text-dim); font-size: 12px; }
-  .device-card .power-row .power-col .power { font-size: 22px; font-weight: 800; margin-top: 2px; }
-
-  .battery-card {
-    flex: 1;
-    min-width: 0;
-    background: var(--card);
-    border: 1px solid var(--card-border);
-    border-radius: 12px;
-    padding: 10px 12px;
-  }
-  .battery-card .battery-head {
-    color: var(--green);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .battery-card .battery-values { display: flex; gap: 14px; margin-top: 8px; }
-  .battery-card .battery-col { flex: 1; min-width: 0; }
-  .battery-card .battery-label { color: var(--text-dim); font-size: 11px; }
-  .battery-card .battery-value { font-size: 18px; font-weight: 800; margin-top: 2px; }
-
-  .device-card .mini-row { display: flex; gap: 14px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--card-border); }
-  .device-card .mini { flex: 1; }
-  .device-card .mini .mini-label { color: var(--text-dim); font-size: 11px; }
-  .device-card .mini .mini-value { font-size: 14px; font-weight: 700; margin-top: 2px; }
-
-  /* UPS bên trái, cột 4 ô số liệu MPPT bên phải — nằm cùng 1 hàng. */
-  .top-row { display: grid; grid-template-columns: 1fr minmax(160px, 210px); gap: 14px; align-items: stretch; }
-  .top-row.only-ups { grid-template-columns: 1fr; }
-  .top-row.only-mppt { grid-template-columns: 1fr; }
-  @media (max-width: 900px) {
-    .top-row { grid-template-columns: 1fr; }
-  }
-
-  .mppt-column { display: flex; flex-direction: column; gap: 12px; height: 100%; }
-  .mppt-box {
-    flex: 1;
-    background: var(--card);
-    border: 1px solid var(--card-border);
-    border-radius: 14px;
-    padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-  .mppt-box .mppt-label { color: var(--text-dim); font-size: 12.5px; font-weight: 500; }
-  .mppt-box .mppt-value { font-size: 24px; font-weight: 800; margin-top: 4px; }
-  .mppt-box .mppt-value .unit { font-size: 13px; color: var(--text-dim); font-weight: 600; margin-left: 4px; }
+  .top-row { display: grid; grid-template-columns: 1fr; gap: 14px; }
 
   /* --- Sơ đồ UPS đầy đủ ngay trên trang tổng quan (không cần vào trang
      chi tiết): Input - Rectifier - Inverter - Output + nhánh Battery + 4
@@ -183,6 +104,22 @@
     top: 45.93%; left: 48.43%; width: 3.14%; height: 29.07%;
   }
 
+  /* Ô tròn "Solar" (không có sẵn trong statusbg.png gốc) + đường dây ngang
+     màu trắng nối sang Battery — cùng kích thước/tâm trục với circle Input
+     (đo bằng flood-fill theo màu nền circle), chỉ đổi tầng y sang hàng
+     Battery để có thể nối thẳng 1 đường ngang. */
+  .ups-diagram-img .ov-solar-line, .ups-diagram-img .ov-solar-anim {
+    top: 81.98%; left: 19.04%; width: 24.58%; height: 4.94%;
+  }
+  .ups-diagram-img .ov-solar-line {
+    position: absolute; background: #fff; border-radius: 2px;
+  }
+  .ups-diagram-img .solar-circle {
+    position: absolute; top: 74.71%; left: 6.65%; width: 12.38%; height: 19.48%;
+    border-radius: 50%; background: #b5aecd; display: flex; align-items: center; justify-content: center;
+  }
+  .ups-diagram-img .solar-circle svg { width: 55%; height: 55%; }
+
   /* Che chữ đen "Bypass/Input/Output/Battery" vốn nằm sẵn trong statusbg.png
      bằng nhãn màu xanh lá (toạ độ đo trực tiếp từ ảnh gốc bằng phân tích
      pixel, không phải áng chừng). */
@@ -198,6 +135,7 @@
   .ups-diagram-img .lbl-input { top: 51.3%; left: 7.5%; width: 11%; height: 6.5%; }
   .ups-diagram-img .lbl-output { top: 51.3%; left: 80.5%; width: 13%; height: 6.5%; }
   .ups-diagram-img .lbl-battery { top: 93.5%; left: 43%; width: 14%; height: 6.5%; }
+  .ups-diagram-img .lbl-solar { top: 94.3%; left: 7.5%; width: 11%; height: 6.5%; }
 
   /* Bố cục 4 khung thông tin nằm CẠNH sơ đồ (không xếp bên dưới nữa), giống
      bố cục gốc ViewPower: UPS trên-phải, Input trái-giữa, Output phải-giữa,
@@ -206,8 +144,8 @@
     display: grid;
     grid-template-columns: minmax(150px, 1fr) minmax(260px, 2fr) minmax(150px, 1fr);
     grid-template-areas:
-      ".      diagram ups"
-      "input  diagram output"
+      "input  diagram ups"
+      "solar  diagram output"
       ".      battery .";
     gap: 14px;
     align-items: center;
@@ -215,14 +153,24 @@
   .ups-layout .area-diagram { grid-area: diagram; }
   .ups-layout .area-ups { grid-area: ups; }
   .ups-layout .area-input { grid-area: input; }
+  .ups-layout .area-solar { grid-area: solar; }
   .ups-layout .area-output { grid-area: output; }
   .ups-layout .area-battery { grid-area: battery; }
   @media (max-width: 720px) {
     .ups-layout {
       grid-template-columns: 1fr;
-      grid-template-areas: "diagram" "ups" "input" "output" "battery";
+      grid-template-areas: "diagram" "input" "ups" "solar" "output" "battery";
     }
   }
+
+  /* Solar/Battery information: dữ liệu sạc lấy từ MPPT Charger (chung 1 bộ
+     ắc quy với UPS) — tựa đề chuyển xanh khi đang có dòng sạc ắc quy
+     (batCurrent > 0), tắt về màu mặc định (giống Input) khi không sạc. */
+  .info-panel .info-title { transition: color .2s; }
+  .info-panel.active .info-title { color: var(--green); }
+  .info-value.charging { color: var(--green); }
+  /* Battery information hẹp lại còn 2/3 chiều rộng gốc (cột diagram), canh giữa. */
+  .ups-layout .area-battery.battery-panel { width: 66.67%; margin: 0 auto; }
 
   .info-panel { background: var(--card); border: 1px solid var(--card-border); border-radius: 14px; padding: 14px 16px; }
   .info-panel .info-title {
@@ -269,11 +217,7 @@
 
       <div class="top-row" id="topRow">
         <div id="upsSection"></div>
-        <div id="mpptColumn"></div>
       </div>
-
-      <h2 class="section-title" id="deviceGridTitle">Thiết bị</h2>
-      <div class="device-grid" id="deviceGrid"></div>
     </div>
 
     <div class="empty" id="emptyState" style="display:none">
@@ -385,13 +329,18 @@ function extractMetrics(data) {
 
 // Sơ đồ UPS đầy đủ (giống hệt bố cục ViewPower gốc), hiển thị trực tiếp
 // trên trang tổng quan — không cần vào trang chi tiết.
-function renderUpsSection(device, liveData) {
+function renderUpsSection(device, liveData, chargerLiveData) {
   const online = !!(liveData && liveData.hasData && liveData.ups);
   const name = (liveData && liveData._name) || device.device_id;
   const payload = online ? liveData.ups : {};
   const statusLabel = online ? friendlyStatus("Ups", payload.statusText, payload) : "Mất kết nối";
   const bypass = !!payload.bypassActive;
   const onBattery = !!payload.onBattery;
+  // Dữ liệu sạc pin từ MPPT Charger (thiết bị khác) — chỉ dùng cho ô "Solar
+  // information", vì UPS và Charger dùng chung 1 bộ ắc quy.
+  const solar = (chargerLiveData && chargerLiveData.hasData && chargerLiveData.charger) || null;
+  const solarCharging = !!(solar && solar.batCurrent > 0);
+  const outputActive = (payload.load || 0) > 0;
 
   return `
     <div class="ups-section ${online ? "" : "offline"}">
@@ -423,31 +372,48 @@ function renderUpsSection(device, liveData) {
                    đang xả (mất điện lưới) -> đổi sang chiều lên (upVline.gif dùng lại). -->
               <img class="ov-battery-charge ${online && !onBattery ? "show" : ""}" src="/static/ups/downVline.gif">
               <img class="ov-battery-discharge ${onBattery ? "show" : ""}" src="/static/ups/upVline.gif">
+              <div class="ov-solar-line"></div>
+              <!-- Dùng lại đúng downVline.gif (xoay ngang 90°) thay vì tự vẽ animation
+                   bằng CSS — giữ nguyên hiệu ứng "vệt sáng chạy" gốc của ViewPower,
+                   chiều chạy trái->phải (Solar->Battery) khớp chiều sạc. -->
+              <img class="ov-solar-anim ${solarCharging ? "show" : ""}" src="/static/ups/solarline.gif">
+              <div class="solar-circle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#231815" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+              </div>
               <div class="label-patch lbl-bypass">Bypass</div>
               <div class="label-patch lbl-input">Input</div>
               <div class="label-patch lbl-output">Output</div>
               <div class="label-patch lbl-battery">Battery</div>
+              <div class="label-patch lbl-solar">Solar</div>
             </div>
           </div>
 
-          <div class="area-ups info-panel">
-            <div class="info-title">UPS information</div>
-            <div class="info-row"><span class="info-label">UPS mode</span><span class="info-value">${payload.workMode || "--"}</span></div>
-            <div class="info-row"><span class="info-label">UPS temp.</span><span class="info-value">${fmt(payload.temperature, 1)}<span class="unit">°C</span></span></div>
-          </div>
           <div class="area-input info-panel">
             <div class="info-title">Input information</div>
             <div class="info-row"><span class="info-label">Input voltage</span><span class="info-value">${fmt(payload.inputVoltage, 1)}<span class="unit">V</span></span></div>
             <div class="info-row"><span class="info-label">Input frequency</span><span class="info-value">${fmt(payload.inputFrequency, 1)}<span class="unit">Hz</span></span></div>
           </div>
-          <div class="area-output info-panel">
+          <div class="area-ups info-panel ${online ? "active" : ""}">
+            <div class="info-title">UPS information</div>
+            <div class="info-row"><span class="info-label">UPS mode</span><span class="info-value">${payload.workMode || "--"}</span></div>
+            <div class="info-row"><span class="info-label">UPS temp.</span><span class="info-value">${fmt(payload.temperature, 1)}<span class="unit">°C</span></span></div>
+          </div>
+          <div class="area-solar info-panel ${solarCharging ? "active" : ""}">
+            <div class="info-title">Solar information</div>
+            <div class="info-row"><span class="info-label">PV voltage</span><span class="info-value">${fmt(solar?.pvVoltage, 1)}<span class="unit">V</span></span></div>
+            <div class="info-row"><span class="info-label">PV current</span><span class="info-value">${fmt(solar?.pvCurrent, 2)}<span class="unit">A</span></span></div>
+            <div class="info-row"><span class="info-label">Charging voltage</span><span class="info-value">${fmt(solar?.batVoltage, 1)}<span class="unit">V</span></span></div>
+            <div class="info-row"><span class="info-label">Charging current</span><span class="info-value ${solarCharging ? "charging" : ""}">${fmt(solar?.batCurrent, 2)}<span class="unit">A</span></span></div>
+          </div>
+          <div class="area-output info-panel ${outputActive ? "active" : ""}">
             <div class="info-title">Output information</div>
             <div class="info-row"><span class="info-label">Output voltage</span><span class="info-value">${fmt(payload.outputVoltage, 1)}<span class="unit">V</span></span></div>
             <div class="info-row"><span class="info-label">Output frequency</span><span class="info-value">${fmt(payload.outputFrequency, 1)}<span class="unit">Hz</span></span></div>
             <div class="info-row"><span class="info-label">Load level</span><span class="info-value">${fmt(payload.load, 0)}<span class="unit">%</span></span></div>
+            <div class="info-row"><span class="info-label">Công suất tiêu thụ</span><span class="info-value">${fmt(payload.loadWatts, 0)}<span class="unit">W</span></span></div>
             <div class="info-row"><span class="info-label">Current</span><span class="info-value">${fmt(payload.outputCurrent, 1)}<span class="unit">A</span></span></div>
           </div>
-          <div class="area-battery info-panel">
+          <div class="area-battery info-panel battery-panel ${solarCharging ? "active" : ""}">
             <div class="info-title">Battery information</div>
             <div class="info-row"><span class="info-label">Battery voltage</span><span class="info-value">${fmt(payload.batteryVoltage, 1)}<span class="unit">V</span></span></div>
             <div class="info-row"><span class="info-label">Battery capacity</span><span class="info-value">${fmt(payload.batteryCharge, 0)}<span class="unit">%</span></span></div>
@@ -456,117 +422,6 @@ function renderUpsSection(device, liveData) {
         </div>
       </div>
     </div>
-  `;
-}
-
-// Cột 4 ô số liệu MPPT (PV Voltage/Current/Power + dòng sạc ắc quy), đặt
-// cạnh sơ đồ UPS thay vì hiện như 1 thẻ thiết bị bình thường.
-function renderMpptColumn(device, liveData) {
-  const online = !!(liveData && liveData.hasData && liveData.charger);
-  const c = online ? liveData.charger : {};
-  const pv = c.pvVoltage, pvA = c.pvCurrent;
-  const pvPower = (pv !== undefined && pv !== null && pvA !== undefined && pvA !== null) ? pv * pvA : null;
-
-  return `
-    <div class="mppt-column">
-      <div class="mppt-box">
-        <div class="mppt-label">PV Voltage</div>
-        <div class="mppt-value">${online ? fmt(pv, 1) : "--"}<span class="unit">V</span></div>
-      </div>
-      <div class="mppt-box">
-        <div class="mppt-label">PV Current</div>
-        <div class="mppt-value">${online ? fmt(pvA, 2) : "--"}<span class="unit">A</span></div>
-      </div>
-      <div class="mppt-box">
-        <div class="mppt-label">PV Power</div>
-        <div class="mppt-value">${online ? fmt(pvPower, 2) : "--"}<span class="unit">W</span></div>
-      </div>
-      <div class="mppt-box">
-        <div class="mppt-label">Dòng sạc ắc quy</div>
-        <div class="mppt-value">${online ? fmt(c.batCurrent, 2) : "--"}<span class="unit">A</span></div>
-      </div>
-    </div>
-  `;
-}
-
-function deviceCard(device, liveData) {
-  const metrics = extractMetrics(liveData);
-  const online = !!(liveData && liveData.hasData && metrics);
-  const name = (liveData && liveData._name) || device.device_id;
-  const kind = (metrics && metrics.kind) || device.device_type || "Unknown";
-
-  const heroValue = online ? fmt(metrics.heroValue, 0) : "--";
-  const heroUnit = metrics ? metrics.heroUnit : "W";
-  const heroExtra = online && metrics ? (metrics.heroExtra || "") : "";
-  const heroLabel = metrics ? metrics.heroLabel : "Công suất";
-  const hasSecondaryHero = metrics && metrics.secondaryHeroValue !== undefined;
-  const secHeroValue = online ? fmt(metrics.secondaryHeroValue, 2) : "--";
-  const secHeroUnit = hasSecondaryHero ? metrics.secondaryHeroUnit : "";
-  const secHeroLabel = hasSecondaryHero ? metrics.secondaryHeroLabel : "";
-  const secLabel = metrics ? metrics.secondaryLabel : "Nhiệt độ";
-  const secValue = online ? fmt(metrics.secondaryValue, 1) : "--";
-  const secUnit = metrics ? metrics.secondaryUnit : "°C";
-  const temp = online ? fmt(metrics.temp, 1) : "--";
-  const statusLabel = online ? (metrics.status || "Online") : "Mất kết nối";
-
-  const hasBattery = metrics && metrics.batVoltage !== undefined;
-  const batVoltage = online ? fmt(metrics.batVoltage, 1) : "--";
-  const batCurrent = online ? fmt(metrics.batCurrent, 1) : "--";
-  const batteryCard = `
-        <div class="battery-card">
-          <div class="battery-head">⚡ Pin lưu trữ</div>
-          <div class="battery-values">
-            <div class="battery-col">
-              <div class="battery-label">Volt</div>
-              <div class="battery-value">${batVoltage}V</div>
-            </div>
-            <div class="battery-col">
-              <div class="battery-label">Amp</div>
-              <div class="battery-value">${batCurrent}A</div>
-            </div>
-          </div>
-        </div>
-  `;
-
-  const heroSection = hasSecondaryHero ? `
-      <div class="power-row">
-        <div class="power-col">
-          <div class="power-label">${secHeroLabel}</div>
-          <div class="power">${secHeroValue}<span class="unit">${secHeroUnit}</span></div>
-        </div>
-        ${hasBattery ? batteryCard : `
-        <div class="power-col align-right">
-          <div class="power-label">${heroLabel}</div>
-          <div class="power">${heroValue}<span class="unit">${heroUnit}${heroExtra}</span></div>
-        </div>
-        `}
-      </div>
-  ` : `
-      <div class="power-label">${heroLabel}</div>
-      <div class="power">${heroValue}<span class="unit">${heroUnit}${heroExtra}</span></div>
-  `;
-
-  return `
-    <a class="device-card ${online ? "" : "offline"}" href="/device/${encodeURIComponent(device.device_id)}">
-      <div class="head">
-        <div>
-          <div class="name">${name}</div>
-          <div class="id">${device.device_id} · ${kind}</div>
-        </div>
-        <span class="badge ${online ? "online" : "offline"}"><span class="dot"></span>${statusLabel}</span>
-      </div>
-      ${heroSection}
-      <div class="mini-row">
-        <div class="mini">
-          <div class="mini-label">${secLabel}</div>
-          <div class="mini-value">${secValue} ${secUnit}</div>
-        </div>
-        <div class="mini">
-          <div class="mini-label">Nhiệt độ</div>
-          <div class="mini-value">${temp} °C</div>
-        </div>
-      </div>
-    </a>
   `;
 }
 
@@ -619,23 +474,13 @@ async function tick() {
   const isCharger = (d) => !!(statusMap[d.device_id] && statusMap[d.device_id].charger);
   const upsDevices = devices.filter(isUps);
   const chargerDevices = devices.filter(isCharger);
-  const mpptDevice = chargerDevices[0]; // chỉ ghép 1 MPPT cạnh UPS, còn lại (nếu có) rơi xuống lưới bên dưới
-  const otherDevices = devices.filter(d => !isUps(d) && d !== mpptDevice);
+  const mpptDevice = chargerDevices[0]; // dùng để lấy dữ liệu sạc cho ô "Solar information" của UPS
 
   const topRow = document.getElementById("topRow");
   document.getElementById("upsSection").innerHTML =
-    upsDevices.map(d => renderUpsSection(d, statusMap[d.device_id])).join("");
-  document.getElementById("mpptColumn").innerHTML =
-    mpptDevice ? renderMpptColumn(mpptDevice, statusMap[mpptDevice.device_id]) : "";
+    upsDevices.map(d => renderUpsSection(d, statusMap[d.device_id], mpptDevice ? statusMap[mpptDevice.device_id] : null)).join("");
 
-  topRow.style.display = (upsDevices.length || mpptDevice) ? "grid" : "none";
-  topRow.classList.toggle("only-ups", upsDevices.length > 0 && !mpptDevice);
-  topRow.classList.toggle("only-mppt", !upsDevices.length && !!mpptDevice);
-
-  const grid = document.getElementById("deviceGrid");
-  grid.innerHTML = otherDevices.map(d => deviceCard(d, statusMap[d.device_id])).join("");
-  document.getElementById("deviceGridTitle").style.display = otherDevices.length ? "block" : "none";
-  grid.style.display = otherDevices.length ? "grid" : "none";
+  topRow.style.display = upsDevices.length ? "grid" : "none";
 }
 
 tick();

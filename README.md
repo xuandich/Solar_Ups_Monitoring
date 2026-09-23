@@ -46,13 +46,15 @@ name = "UPS Phòng Server"
 nominal_watts = 800   # công suất định mức thực (W); ViewPower không tự báo
 ```
 
-Trang chi tiết thiết bị hiển thị **sơ đồ dòng điện** (Input → Rectifier →
-Inverter → Output, nhánh Battery, chỉ báo Bypass) giống giao diện ViewPower
-gốc, cùng 4 khung thông tin UPS/Input/Output/Battery — tự đổi màu theo trạng
-thái thực tế: Bypass đang bật (nhãn xanh), đang xả ắc quy/mất điện lưới (nút
-Input mờ đi, nhánh Battery sáng vàng nhấp nháy). Không tính vào tổng công
-suất/điện năng mặt trời. Các trường live hiển thị đầy đủ, nhưng **chỉ mục
-Load được lưu lịch sử + xem biểu đồ** (12h/ngày/tháng) — các trường còn lại
+Trang tổng quan (`/`) hiển thị **sơ đồ dòng điện** của UPS (Input → Rectifier
+→ Inverter → Output, nhánh Battery, chỉ báo Bypass, nhánh Solar nối sang
+Battery) giống giao diện ViewPower gốc, cùng các khung thông tin
+Input/UPS/Solar/Output/Battery — tự đổi màu theo trạng thái thực tế: Bypass
+đang bật (nhãn xanh), đang xả ắc quy/mất điện lưới (nút Input mờ đi, nhánh
+Battery sáng vàng nhấp nháy), đang có dòng sạc từ Solar (nhánh Solar→Battery
+chạy xanh). Không tính vào tổng công suất/điện năng mặt trời. Các trường live
+hiển thị đầy đủ, nhưng **chỉ mục Load của UPS được lưu lịch sử** (qua
+`/api/history`/`/api/chart`, xem README API bên dưới) — các trường còn lại
 (Battery Charge, Runtime, Voltage...) chỉ xem live, không lưu lâu dài.
 
 ### Bảo vệ ổ đĩa/SSD: 2 tầng giảm tải, tách rời tần suất poll
@@ -115,8 +117,7 @@ Mặc định server nghe ở `0.0.0.0:8000` (đổi trong `config.toml`).
 
 | URL | Nội dung |
 | --- | --- |
-| `GET /` | Trang tổng quan: số liệu tổng hợp toàn hệ thống (tổng công suất, điện năng hôm nay/tích luỹ, số thiết bị online) + card riêng cho từng thiết bị |
-| `GET /device/{device_id}` | Dashboard theo dõi 1 thiết bị theo thời gian thực (tự refresh mỗi 2s), tương tự trang chi tiết thiết bị trên manhquansolar.io.vn — nhưng lấy dữ liệu trực tiếp từ mạng nội bộ |
+| `GET /` | Trang duy nhất: số liệu tổng hợp toàn hệ thống (tổng công suất, điện năng hôm nay/tích luỹ, số thiết bị online) + sơ đồ dòng điện UPS đầy đủ (Input/UPS/Solar/Output/Battery information), tự refresh mỗi 2 giây |
 
 ## Chạy nền bằng systemd
 
@@ -141,8 +142,7 @@ app/
   poller.py            # vòng lặp poll + giữ dữ liệu mới nhất trong bộ nhớ
   server.py            # FastAPI app / route REST + trang HTML
   static/
-    index.html          # trang tổng quan: tổng hợp số liệu + card từng thiết bị
-    dashboard.html       # trang theo dõi 1 thiết bị theo thời gian thực
+    index.html          # trang duy nhất: tổng hợp số liệu + sơ đồ dòng điện UPS
     icon.jpg              # logo (dùng lại từ custom_components/local_mqsolar/icon.png)
 main.py                # entrypoint, khởi động poller + uvicorn, xử lý SIGINT/SIGTERM
 start.sh / stop.sh      # chạy / dừng service nền (PID + log file)

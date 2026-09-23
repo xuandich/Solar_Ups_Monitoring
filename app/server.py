@@ -23,10 +23,6 @@ def create_app(poller: Poller, storage: Storage) -> FastAPI:
     async def index():
         return FileResponse(STATIC_DIR / "index.html")
 
-    @app.get("/device/{device_id}", response_class=HTMLResponse)
-    async def device_page(device_id: str):
-        return FileResponse(STATIC_DIR / "dashboard.html")
-
     @app.get("/health")
     async def health():
         return {"ok": True}
