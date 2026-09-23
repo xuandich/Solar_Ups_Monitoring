@@ -349,6 +349,16 @@ function renderUpsSection(device, liveData, chargerLiveData) {
   const solarCharging = !!(solar && solar.batCurrent > 0);
   const outputActive = (payload.load || 0) > 0;
 
+  // Dòng xả ắc quy (khi là số ước tính P/(hiệu suất×V)) chỉ phản ánh dòng
+  // inverter rút ra — nếu solar đang đồng thời sạc vào cùng bộ ắc quy đó,
+  // phần dòng xả thực (net) giảm đi đúng bằng dòng sạc solar (KCL tại cực
+  // ắc quy); dòng đo trực tiếp thật (không estimated) đã tự là dòng net rồi
+  // nên không cộng/trừ gì thêm.
+  let dischargeCurrent = payload.dischargeCurrent;
+  if (payload.dischargeCurrentEstimated && dischargeCurrent != null && solarCharging) {
+    dischargeCurrent = Math.max(0, dischargeCurrent - solar.batCurrent);
+  }
+
   return `
     <div class="ups-section ${online ? "" : "offline"}">
       <div class="head">
@@ -423,7 +433,7 @@ function renderUpsSection(device, liveData, chargerLiveData) {
           <div class="area-battery info-panel battery-panel ${solarCharging ? "active" : ""}">
             <div class="info-title">Battery information</div>
             <div class="info-row"><span class="info-label">Battery voltage</span><span class="info-value">${fmt(payload.batteryVoltage, 1)}<span class="unit">V</span></span></div>
-            <div class="info-row"><span class="info-label">Discharge current${payload.dischargeCurrentEstimated ? " (estimated)" : ""}</span><span class="info-value">${payload.dischargeCurrentEstimated ? "≈" : ""}${fmt(payload.dischargeCurrent, 1)}<span class="unit">A</span></span></div>
+            <div class="info-row"><span class="info-label">Discharge current${payload.dischargeCurrentEstimated ? " (estimated)" : ""}</span><span class="info-value ${solarCharging ? "charging" : ""}">${payload.dischargeCurrentEstimated ? "≈" : ""}${fmt(dischargeCurrent, 1)}<span class="unit">A</span></span></div>
             <div class="info-row"><span class="info-label">Battery capacity</span><span class="info-value">${fmt(payload.batteryCharge, 0)}<span class="unit">%</span></span></div>
             <div class="info-row"><span class="info-label">Remaining backup time</span><span class="info-value">${fmt(payload.batteryRuntimeMin, 0)}<span class="unit">Min</span></span></div>
           </div>
