@@ -94,13 +94,22 @@ class MQSolarApiClient:
                             self.endpoint = "/api/data"
             except Exception:
                 self.endpoint = "/api/data"
-                    
-        async with async_timeout.timeout(5):
-            async with self.session.get(f"http://{self.host}{self.endpoint}") as resp:
-                data = await resp.json()
-                data["_device_type"] = self.device_type 
-                data["_device_id"] = self.device_id
-                return normalize_data(data)
+
+        try:
+            async with async_timeout.timeout(5):
+                async with self.session.get(f"http://{self.host}{self.endpoint}") as resp:
+                    if resp.status != 200:
+                        raise RuntimeError(f"{self.endpoint} returned HTTP {resp.status}")
+                    data = await resp.json()
+        except Exception:
+            # Endpoint guess may be stale (device rebooted, or detection ran while
+            # the device was briefly unreachable) - re-detect on the next poll.
+            self.endpoint = None
+            raise
+
+        data["_device_type"] = self.device_type
+        data["_device_id"] = self.device_id
+        return normalize_data(data)
 
 class MQSolarCloudClient:
     def __init__(self, token, device_ids, session):
