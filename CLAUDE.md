@@ -48,3 +48,7 @@ UPS load is the only ViewPower field persisted to history/charts (see the `store
 ## Config notes
 
 `config.toml` is gitignored (contains a cloud API token and local network topology) — always edit it directly rather than assuming `config.example.toml` reflects the live setup. `mqsolar.db*`, `mqsolar.log`, `mqsolar.pid`, and `mqsolar.service` are also gitignored/host-local.
+
+## Commit messages
+
+Keep commit messages to a short title line only (a handful of words, imperative mood, e.g. `Add estimated battery discharge current`) — no body, no bullet points, no trailing blank lines.
