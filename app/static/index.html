@@ -27,10 +27,11 @@
     padding: 16px;
   }
   /* +204px (190px cột KPI + 14px gap) để ô UPS vẫn giữ nguyên bề rộng ~1100px
-     như lúc cột KPI còn nằm ngang phía trên, thay vì bị cột KPI lấn vào. */
-  .wrap { max-width: 1304px; margin: 0 auto; }
+     như lúc cột KPI còn nằm ngang phía trên, thay vì bị cột KPI lấn vào.
+     +76px (~1cm mỗi bên) để ô UPS giãn rộng thêm; +63px do cột KPI rộng thêm 1/3. */
+  .wrap { max-width: 1443px; margin: 0 auto; }
 
-  .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
   .topbar img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
   .topbar h1 { font-size: 20px; margin: 0; }
   .topbar .sub { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
@@ -63,11 +64,12 @@
 
   /* Cột 4 ô KPI hẹp lại còn ~2/3 bề rộng gốc (trước đây nằm hàng ngang phía
      trên, mỗi ô ~260-280px), đặt bên trái ô UPS thay vì phía trên. */
-  .top-row { display: grid; grid-template-columns: minmax(150px, 190px) 1fr; gap: 14px; align-items: start; }
+  .top-row { display: grid; grid-template-columns: minmax(200px, 253px) 1fr; gap: 14px; align-items: start; }
   @media (max-width: 900px) {
     .top-row { grid-template-columns: 1fr; }
     .kpi-grid { flex-direction: row; flex-wrap: wrap; }
     .kpi-grid .kpi { flex: 1 1 180px; }
+    .kpi-grid .topbar { flex: 1 1 100%; }
   }
 
   /* --- Sơ đồ UPS đầy đủ ngay trên trang tổng quan (không cần vào trang
@@ -182,13 +184,13 @@
 
   .info-panel { background: var(--card); border: 1px solid var(--card-border); border-radius: 14px; padding: 14px 16px; }
   .info-panel .info-title {
-    font-weight: 700; font-size: 12px; text-align: center; padding-bottom: 8px; margin-bottom: 8px;
+    font-weight: 700; font-size: 13px; text-align: center; padding-bottom: 8px; margin-bottom: 8px;
     border-bottom: 1px solid var(--card-border); color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em;
   }
   .info-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 5px 0; }
-  .info-row .info-label { color: var(--text-dim); font-size: 12.5px; }
-  .info-row .info-value { font-weight: 700; font-size: 14px; white-space: nowrap; }
-  .info-row .info-value .unit { color: var(--text-dim); font-weight: 500; font-size: 12px; margin-left: 3px; }
+  .info-row .info-label { color: var(--text-dim); font-size: 13.5px; }
+  .info-row .info-value { font-weight: 700; font-size: 15px; white-space: nowrap; }
+  .info-row .info-value .unit { color: var(--text-dim); font-weight: 500; font-size: 13px; margin-left: 3px; }
 
   .empty { color: var(--text-dim); text-align: center; margin-top: 60px; }
   .empty code { background: var(--card); padding: 2px 6px; border-radius: 6px; }
@@ -196,16 +198,15 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="topbar">
-      <div>
-        <h1>Tổng quan hệ thống</h1>
-        <div class="sub" id="subLine">Đang tải…</div>
-      </div>
-    </div>
-
     <div id="content" style="display:none">
       <div class="top-row" id="topRow">
         <div class="kpi-grid">
+          <div class="topbar">
+            <div>
+              <h1>Tổng quan hệ thống</h1>
+              <div class="sub" id="subLine">Đang tải…</div>
+            </div>
+          </div>
           <div class="kpi" style="--accent:var(--amber)">
             <div class="label">Tổng công suất hiện tại</div>
             <div class="value"><span id="kpiPower">--</span><span class="unit">W</span></div>
@@ -217,6 +218,10 @@
           <div class="kpi" style="--accent:var(--cyan)">
             <div class="label">Điện năng tích luỹ</div>
             <div class="value"><span id="kpiTotal">--</span><span class="unit">kWh</span></div>
+          </div>
+          <div class="kpi" style="--accent:var(--green)">
+            <div class="label">Tiền tiết kiệm</div>
+            <div class="value"><span id="kpiSaving">--</span><span class="unit">VND</span></div>
           </div>
           <div class="kpi" style="--accent:var(--blue)">
             <div class="label">Thiết bị online</div>
@@ -235,6 +240,9 @@
 
 <script>
 const POLL_MS = 2000;
+
+// Đơn giá điện dùng để quy đổi điện năng tích luỹ thành tiền tiết kiệm (VND/kWh).
+const PRICE_PER_KWH_VND = 2998;
 
 function fmt(v, decimals) {
   if (v === null || v === undefined || Number.isNaN(v)) return "--";
@@ -268,24 +276,11 @@ function friendlyUpsStatus(raw) {
 function extractMetrics(data) {
   if (!data) return null;
   if (data.charger) {
-    const pv = data.charger.pvVoltage, pvA = data.charger.pvCurrent;
-    const pvPower = (pv !== undefined && pv !== null && pvA !== undefined && pvA !== null) ? pv * pvA : null;
     return {
       kind: "Charger",
       power: data.charger.chargingPower,
-      heroValue: data.charger.chargingPower,
-      heroUnit: "W",
-      heroLabel: "Công suất sạc",
-      // Công suất PV (panel) hiển thị riêng, cạnh công suất sạc thực tế
-      // (khác nhau vì hiệu suất chuyển đổi MPPT / tổn hao).
-      secondaryHeroValue: pvPower,
-      secondaryHeroUnit: "W",
-      secondaryHeroLabel: "Công suất PV",
       today: data.charger.powerToday,
       total: data.charger.powerTotal,
-      secondaryLabel: "PV Voltage",
-      secondaryValue: data.charger.pvVoltage,
-      secondaryUnit: "V",
       batVoltage: data.charger.batVoltage,
       batCurrent: data.charger.batCurrent,
       temp: data.charger.temperature,
@@ -296,14 +291,8 @@ function extractMetrics(data) {
     return {
       kind: "Inverter",
       power: data.inverter.outputPower,
-      heroValue: data.inverter.outputPower,
-      heroUnit: "W",
-      heroLabel: "Công suất hòa lưới",
       today: data.inverter.energyToday,
       total: data.inverter.energyTotal,
-      secondaryLabel: "AC Voltage",
-      secondaryValue: data.inverter.acVoltage,
-      secondaryUnit: "V",
       temp: data.inverter.temperature,
       status: data.inverter.statusText,
     };
@@ -313,15 +302,8 @@ function extractMetrics(data) {
       kind: "Ups",
       // Không phải năng lượng mặt trời -> không cộng vào tổng công suất/điện năng hệ thống.
       power: null,
-      heroValue: data.ups.load,
-      heroUnit: "%",
-      heroExtra: (data.ups.loadWatts !== null && data.ups.loadWatts !== undefined) ? ` (${fmt(data.ups.loadWatts, 0)} W)` : "",
-      heroLabel: "Tải UPS",
       today: null,
       total: null,
-      secondaryLabel: "Battery Charge",
-      secondaryValue: data.ups.batteryCharge,
-      secondaryUnit: "%",
       temp: data.ups.temperature,
       status: friendlyStatus("Ups", data.ups.statusText, data.ups),
       bypassActive: !!data.ups.bypassActive,
@@ -421,6 +403,7 @@ function renderUpsSection(device, liveData, chargerLiveData) {
             <div class="info-row"><span class="info-label">PV current</span><span class="info-value">${fmt(solar?.pvCurrent, 2)}<span class="unit">A</span></span></div>
             <div class="info-row"><span class="info-label">Charging voltage</span><span class="info-value">${fmt(solar?.batVoltage, 1)}<span class="unit">V</span></span></div>
             <div class="info-row"><span class="info-label">Charging current</span><span class="info-value ${solarCharging ? "charging" : ""}">${fmt(solar?.batCurrent, 2)}<span class="unit">A</span></span></div>
+            <div class="info-row"><span class="info-label">Charging power</span><span class="info-value ${solarCharging ? "charging" : ""}">${fmt(solar ? solar.batVoltage * solar.batCurrent : null, 0)}<span class="unit">W</span></span></div>
           </div>
           <div class="area-output info-panel ${outputActive ? "active" : ""}">
             <div class="info-title">Output information</div>
@@ -485,6 +468,7 @@ async function tick() {
   document.getElementById("kpiPower").textContent = fmt(totalPower, 0);
   document.getElementById("kpiToday").textContent = fmt(totalToday, 2);
   document.getElementById("kpiTotal").textContent = fmt(totalTotal, 2);
+  document.getElementById("kpiSaving").textContent = Math.round(totalTotal * PRICE_PER_KWH_VND).toLocaleString("vi-VN");
   document.getElementById("kpiOnline").textContent = `${onlineCount}/${devices.length}`;
   document.getElementById("subLine").textContent = `${devices.length} thiết bị đã ghi nhận · ${onlineCount} đang online`;
 
