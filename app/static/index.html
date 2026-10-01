@@ -219,6 +219,10 @@
             <div class="label">Điện năng hôm nay</div>
             <div class="value"><span id="kpiToday">--</span><span class="unit">kWh</span></div>
           </div>
+          <div class="kpi" style="--accent:var(--green)">
+            <div class="label">Tiền tiết kiệm hôm nay</div>
+            <div class="value"><span id="kpiSavingToday">--</span><span class="unit">VND</span></div>
+          </div>
           <div class="kpi" style="--accent:var(--cyan)">
             <div class="label">Điện năng tích luỹ</div>
             <div class="value"><span id="kpiTotal">--</span><span class="unit">kWh</span></div>
@@ -472,6 +476,7 @@ async function tick() {
   document.getElementById("kpiPower").textContent = fmt(totalPower, 0);
   document.getElementById("kpiToday").textContent = fmt(totalToday, 2);
   document.getElementById("kpiTotal").textContent = fmt(totalTotal, 2);
+  document.getElementById("kpiSavingToday").textContent = Math.round(totalToday * PRICE_PER_KWH_VND).toLocaleString("vi-VN");
   document.getElementById("kpiSaving").textContent = Math.round(totalTotal * PRICE_PER_KWH_VND).toLocaleString("vi-VN");
   document.getElementById("kpiOnline").textContent = `${onlineCount}/${devices.length}`;
   document.getElementById("subLine").textContent = `${devices.length} thiết bị đã ghi nhận · ${onlineCount} đang online`;
