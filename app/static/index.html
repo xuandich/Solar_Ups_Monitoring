@@ -162,8 +162,11 @@
   }
   .ups-layout .area-diagram { grid-area: diagram; }
   .ups-layout .area-ups { grid-area: ups; }
-  .ups-layout .area-input { grid-area: input; }
-  .ups-layout .area-solar { grid-area: solar; }
+  /* Đẩy ô Input xuống ~56px để mép dưới ô ngang với mép dưới biểu tượng Input. */
+  .ups-layout .area-input { grid-area: input; position: relative; top: 56px; }
+  /* Đẩy ô Solar xuống ~49px (position relative không đổi layout lưới) để
+     tâm ô khớp với tâm biểu tượng Solar trong sơ đồ (84.45% chiều cao sơ đồ). */
+  .ups-layout .area-solar { grid-area: solar; position: relative; top: 49px; }
   .ups-layout .area-output { grid-area: output; }
   .ups-layout .area-battery { grid-area: battery; }
   @media (max-width: 720px) {
@@ -171,6 +174,7 @@
       grid-template-columns: 1fr;
       grid-template-areas: "diagram" "input" "ups" "solar" "output" "battery";
     }
+    .ups-layout .area-solar, .ups-layout .area-input { top: 0; }
   }
 
   /* Solar/Battery information: dữ liệu sạc lấy từ MPPT Charger (chung 1 bộ
