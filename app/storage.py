@@ -234,6 +234,13 @@ class Storage:
         await self._conn.commit()
         return cur.rowcount > 0
 
+    async def get_hourly(self, device_id: str, bucket_start: float) -> dict | None:
+        async with self._conn.execute(
+            "SELECT data FROM hourly_readings WHERE device_id = ? AND bucket_start = ?", (device_id, bucket_start)
+        ) as cursor:
+            row = await cursor.fetchone()
+        return json.loads(row[0]) if row else None
+
     async def rollup_day(self, device_id: str, device_type: str | None, mode: str, day_start: float):
         await self._rollup_day(device_id, device_type, mode, day_start)
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import aiohttp
 
-from . import cloud_sync
+from . import cloud_sync, drive_sync
 from .config import AppConfig, LocalDeviceConfig, ViewPowerDeviceConfig
 from .energy import EnergyTracker
 from .mqsolar_client import MQSolarApiClient, MQSolarCloudClient
@@ -75,18 +75,65 @@ class Poller:
                     await self.storage.rollup_day(device_id, str(device_type), "local", day)
             _LOGGER.info("Cloud sync %s: vá %d/%d giờ vào DB, cập nhật số liệu ngày", device_id, filled, hourly)
 
+    async def _sync_drive_backup(self):
+        """Đọc bản sao lưu trên Google Drive: kiểm tra chéo với DB local và vá số liệu còn thiếu."""
+        cfg = self.config
+        device_ids = [d for d, v in self.latest.items() if v.get("charger")]
+        now = time.time()
+        for device_id in device_ids:
+            body = await drive_sync.fetch_backup(
+                self._session, cfg.drive_backup_url, cfg.drive_backup_key, device_id,
+                since=now - cloud_sync.HOURLY_LOOKBACK_DAYS * 86400,
+            )
+            hourly_rows, daily_rows = list(body.get("hourly", {}).values()), list(body.get("daily", {}).values())
+            self.energy.apply_cloud_days(device_id, cloud_sync.daily_kwh(daily_rows))
+            filled = checked = mismatched = 0
+            if cfg.storage_enabled:
+                device_type = self.latest[device_id].get("_device_type")
+                days = set()
+                for r in hourly_rows:
+                    bucket, data = cloud_sync.hourly_row(r, device_type)
+                    if await self.storage.insert_hourly_if_missing(device_id, str(device_type), "local", bucket, data):
+                        filled += 1
+                        days.add(bucket - bucket % 86400)
+                        continue
+                    local = await self.storage.get_hourly(device_id, bucket)
+                    if not local or local.get("_scaled"):
+                        continue   # dòng này vốn từ cloud/Drive, không phải số đo local độc lập
+                    a = (local.get("charger") or {}).get("chargingPower")
+                    b = data["charger"].get("chargingPower")
+                    if a is None or b is None:
+                        continue
+                    checked += 1
+                    if abs(a - b) > max(30.0, 0.25 * max(a, b)):
+                        mismatched += 1
+                        _LOGGER.warning("Drive vs local lệch giờ %s: local %.0f W, Drive %.0f W",
+                                        time.strftime("%d/%m %H:00", time.localtime(bucket)), a, b)
+                for day in days:
+                    await self.storage.rollup_day(device_id, str(device_type), "local", day)
+            _LOGGER.info("Drive backup %s: %d giờ / %d ngày; vá %d giờ; so khớp %d giờ (lệch %d)",
+                         device_id, len(hourly_rows), len(daily_rows), filled, checked, mismatched)
+
     async def _run_cloud_sync(self):
-        """Đồng bộ khi khởi động và sau đó cloud_sync_per_day lần mỗi ngày (mặc định 4 = 6 giờ/lần)."""
+        """Đồng bộ khi khởi động và sau đó cloud_sync_per_day lần mỗi ngày (mặc định 4 = 6 giờ/lần):
+        cloud REST API (nếu có token) và bản sao lưu Google Drive (nếu có [drive_backup])."""
         interval = 86400 / self.config.cloud_sync_per_day
         await asyncio.sleep(30)   # chờ vòng poll đầu tiên có dữ liệu
         while True:
-            try:
-                await self._sync_cloud_history()
-                delay = interval
-            except Exception as e:
-                _LOGGER.warning("Cloud sync thất bại, thử lại sau 10 phút: %s", e)
-                delay = 600
-            await asyncio.sleep(delay)
+            ok = True
+            if self.config.cloud_api_token:
+                try:
+                    await self._sync_cloud_history()
+                except Exception as e:
+                    ok = False
+                    _LOGGER.warning("Cloud sync thất bại, thử lại sau 10 phút: %s", e)
+            if self.config.drive_backup_url and self.config.drive_backup_key:
+                try:
+                    await self._sync_drive_backup()
+                except Exception as e:
+                    ok = False
+                    _LOGGER.warning("Drive backup sync thất bại, thử lại sau 10 phút: %s", e)
+            await asyncio.sleep(interval if ok else 600)
 
     async def _maybe_persist(self, device_id: str, mode: str, data: dict):
         """Ghi xuống DB tối đa 1 lần mỗi raw_persist_interval_seconds/thiết bị.
@@ -121,7 +168,7 @@ class Poller:
         for vp_cfg in self.config.viewpower_devices:
             self._tasks.append(asyncio.create_task(self._run_viewpower(vp_cfg)))
 
-        if self.config.cloud_api_token:
+        if self.config.cloud_api_token or (self.config.drive_backup_url and self.config.drive_backup_key):
             self._tasks.append(asyncio.create_task(self._run_cloud_sync()))
 
         if self.config.storage_enabled:

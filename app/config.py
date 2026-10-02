@@ -42,6 +42,8 @@ class AppConfig:
     viewpower_devices: list[ViewPowerDeviceConfig] = field(default_factory=list)
     cloud_api_token: str | None = None
     cloud_sync_per_day: int = 4
+    drive_backup_url: str | None = None
+    drive_backup_key: str | None = None
 
 
 def load_config(path: str | Path = "config.toml") -> AppConfig:
@@ -72,6 +74,7 @@ def load_config(path: str | Path = "config.toml") -> AppConfig:
         )
 
     cloud_api = raw.get("cloud_api") or {}
+    drive_backup = raw.get("drive_backup") or {}
 
     viewpower_devices = [
         ViewPowerDeviceConfig(
@@ -104,4 +107,6 @@ def load_config(path: str | Path = "config.toml") -> AppConfig:
         viewpower_devices=viewpower_devices,
         cloud_api_token=cloud_api.get("token") or None,
         cloud_sync_per_day=max(1, int(cloud_api.get("sync_per_day", 4))),
+        drive_backup_url=drive_backup.get("url") or None,
+        drive_backup_key=drive_backup.get("key") or None,
     )

@@ -68,3 +68,9 @@ name = "MPPT Charger"
 # [cloud_api]
 # sync_per_day = 4        # đồng bộ khi khởi động và N lần mỗi ngày
 # token = "..."
+
+# Tuỳ chọn: đọc lại bản sao lưu trên Google Drive qua web app Apps Script
+# (google_apps_script/mqsolar_backup.gs, hàm doGet) để kiểm tra chéo / vá số liệu thiếu.
+# [drive_backup]
+# url = "https://script.google.com/macros/s/.../exec"
+# key = "mã bí mật trùng WEBAPP_KEY của script"

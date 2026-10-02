@@ -10,3 +10,4 @@ mqsolar.service
 mqsolar.pid
 mqsolar.log
 mqsolar_energy.json
+*.local.gs
