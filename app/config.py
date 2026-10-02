@@ -40,6 +40,8 @@ class AppConfig:
     local_devices: list[LocalDeviceConfig] = field(default_factory=list)
     cloud: CloudConfig | None = None
     viewpower_devices: list[ViewPowerDeviceConfig] = field(default_factory=list)
+    cloud_api_token: str | None = None
+    cloud_sync_per_day: int = 4
 
 
 def load_config(path: str | Path = "config.toml") -> AppConfig:
@@ -68,6 +70,8 @@ def load_config(path: str | Path = "config.toml") -> AppConfig:
             token=cloud_raw["token"],
             device_ids=list(cloud_raw.get("device_ids", [])),
         )
+
+    cloud_api = raw.get("cloud_api") or {}
 
     viewpower_devices = [
         ViewPowerDeviceConfig(
@@ -98,4 +102,6 @@ def load_config(path: str | Path = "config.toml") -> AppConfig:
         local_devices=local_devices,
         cloud=cloud,
         viewpower_devices=viewpower_devices,
+        cloud_api_token=cloud_api.get("token") or None,
+        cloud_sync_per_day=max(1, int(cloud_api.get("sync_per_day", 4))),
     )

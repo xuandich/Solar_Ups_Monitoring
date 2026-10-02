@@ -62,3 +62,9 @@ name = "MPPT Charger"
 # ViewPower không báo công suất định mức (VA) — điền tay nếu biết (W) để
 # tính thêm loadWatts từ % load; bỏ trống thì chỉ hiện %.
 # nominal_watts = 800
+
+# Tuỳ chọn: đồng bộ lịch sử từ cloud REST API để vá dữ liệu khi máy không chạy.
+# token ở đây là JWT đăng nhập tài khoản Mạnh Quân Solar (KHÁC token WebSocket ở [cloud]).
+# [cloud_api]
+# sync_per_day = 4        # đồng bộ khi khởi động và N lần mỗi ngày
+# token = "..."

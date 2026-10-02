@@ -45,6 +45,12 @@ Everything is asyncio/FastAPI. Data flows one direction: **Poller (in-memory) �
 
 UPS load is the only ViewPower field persisted to history/charts (see the `store_data` subset built in `poller.py`'s `_run_viewpower`); everything else (battery charge, voltages, runtime, temperature) is live-only and excluded from solar power/energy totals. `nominal_watts` in `[[viewpower_devices]]` is required for load-percentage display since ViewPower itself doesn't report it.
 
+### MPPT energy: PV side vs battery side
+
+The MPPT's own kWh counters (`powerToday`/`powerTotal`, and cloud `kwh_today`/`kwh_total`) measure the **PV side**. Measured (2026-10-02, 1 Hz integration): real energy into the battery = **0.91 ×** the counter (≈9% MPPT conversion loss). The dashboard's kWh/savings use `batToday/batMonth/batYear/batTotal`, which `poller.py` integrates from `batVoltage × batCurrent` (persisted in gitignored `mqsolar_energy.json`). Any kWh imported from the cloud or the device counter (history backfill, seeding) must be multiplied by 0.91 to stay on the same basis; hourly/daily DB rows imported that way carry `"_scaled": 0.91`.
+
+Gaps while the machine is off are patched in two ways (`app/energy.py`, `app/cloud_sync.py`): a pause within one day is filled from the device counter's increase × 0.91 (the MPPT keeps counting); multi-day pauses/days with no local data are filled from the cloud REST stats. The cloud sync runs at startup and `sync_per_day` times a day (default 4, every 6 h) when `config.toml` has `[cloud_api] token` (a login JWT, not the WebSocket token); it also fills missing hourly rows in the DB. Per-day energy is `live + gap`, or `max(live + gap, cloud)` for flagged days, so a fully-measured day is never overwritten by the cloud.
+
 ## Config notes
 
 `config.toml` is gitignored (contains a cloud API token and local network topology) — always edit it directly rather than assuming `config.example.toml` reflects the live setup. `mqsolar.db*`, `mqsolar.log`, `mqsolar.pid`, and `mqsolar.service` are also gitignored/host-local.

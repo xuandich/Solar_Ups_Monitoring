@@ -297,10 +297,12 @@ function extractMetrics(data) {
     return {
       kind: "Charger",
       power: data.charger.chargingPower,
-      today: data.charger.powerToday,
-      month: data.charger.powerMonth,
-      year: data.charger.powerYear,
-      total: data.charger.powerTotal,
+      // Điện năng thực vào ắc quy (service tự tích phân V×I); bộ đếm của
+      // thiết bị (powerToday/powerTotal) tính theo PV nên cao hơn ~9%.
+      today: data.charger.batToday,
+      month: data.charger.batMonth,
+      year: data.charger.batYear,
+      total: data.charger.batTotal,
       batVoltage: data.charger.batVoltage,
       batCurrent: data.charger.batCurrent,
       temp: data.charger.temperature,
@@ -488,12 +490,12 @@ async function tick() {
   }
 
   document.getElementById("kpiPower").textContent = fmt(totalPower, 0);
-  document.getElementById("kpiToday").textContent = fmt(totalToday, 2);
-  document.getElementById("kpiMonth").textContent = fmt(totalMonth, 2);
+  document.getElementById("kpiToday").textContent = fmt(totalToday, 3);
+  document.getElementById("kpiMonth").textContent = fmt(totalMonth, 3);
   document.getElementById("kpiSavingMonth").textContent = Math.round(totalMonth * PRICE_PER_KWH_VND).toLocaleString("vi-VN");
-  document.getElementById("kpiYear").textContent = fmt(totalYear, 2);
+  document.getElementById("kpiYear").textContent = fmt(totalYear, 3);
   document.getElementById("kpiSavingYear").textContent = Math.round(totalYear * PRICE_PER_KWH_VND).toLocaleString("vi-VN");
-  document.getElementById("kpiTotal").textContent = fmt(totalTotal, 2);
+  document.getElementById("kpiTotal").textContent = fmt(totalTotal, 3);
   document.getElementById("kpiSavingToday").textContent = Math.round(totalToday * PRICE_PER_KWH_VND).toLocaleString("vi-VN");
   document.getElementById("kpiSaving").textContent = Math.round(totalTotal * PRICE_PER_KWH_VND).toLocaleString("vi-VN");
   document.getElementById("subLine").textContent = `${devices.length} thiết bị đã ghi nhận · ${onlineCount} đang online`;

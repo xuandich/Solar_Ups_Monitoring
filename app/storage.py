@@ -225,6 +225,18 @@ class Storage:
         )
         await self._conn.commit()
 
+    async def insert_hourly_if_missing(self, device_id: str, device_type: str | None, mode: str, bucket_start: float, data: dict) -> bool:
+        """Chèn 1 dòng theo giờ chỉ khi chưa có (không ghi đè số đo local). Trả True nếu đã chèn."""
+        cur = await self._conn.execute(
+            "INSERT OR IGNORE INTO hourly_readings (device_id, device_type, mode, bucket_start, data) VALUES (?, ?, ?, ?, ?)",
+            (device_id, device_type, mode, bucket_start, json.dumps(data)),
+        )
+        await self._conn.commit()
+        return cur.rowcount > 0
+
+    async def rollup_day(self, device_id: str, device_type: str | None, mode: str, day_start: float):
+        await self._rollup_day(device_id, device_type, mode, day_start)
+
     async def run_rollups(self):
         """Tính lại giờ/ngày hiện tại + giờ/ngày trước đó cho mọi thiết bị.
 

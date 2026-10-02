@@ -1,24 +1,23 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import time
 from pathlib import Path
 
 import aiohttp
 
+from . import cloud_sync
 from .config import AppConfig, LocalDeviceConfig, ViewPowerDeviceConfig
+from .energy import EnergyTracker
 from .mqsolar_client import MQSolarApiClient, MQSolarCloudClient
 from .storage import Storage
 from .viewpower_client import fetch_work_info, normalize_viewpower
 
 _LOGGER = logging.getLogger(__name__)
 
-# Thiết bị MPPT chỉ báo điện năng "hôm nay" và "tổng" — không có số theo tháng,
-# và storage có thể đang tắt. Nên lưu mốc "tổng" đầu tháng ra file nhỏ này;
-# điện năng tháng/năm = tổng hiện tại - mốc đầu tháng/năm.
-MONTH_BASELINE_FILE = Path(__file__).resolve().parent.parent / "mqsolar_month.json"
+# Điện năng thực vào ắc quy tự tích phân + vá khi tạm dừng: xem app/energy.py.
+ENERGY_FILE = Path(__file__).resolve().parent.parent / "mqsolar_energy.json"
 
 
 class Poller:
@@ -33,44 +32,61 @@ class Poller:
         self._tasks: list[asyncio.Task] = []
         self._cloud_client: MQSolarCloudClient | None = None
         self._last_persist: dict[str, float] = {}
-        self._month_baseline: dict[str, dict] = self._load_month_baseline()
+        self.energy = EnergyTracker(ENERGY_FILE)
 
-    @staticmethod
-    def _load_month_baseline() -> dict[str, dict]:
-        try:
-            return json.loads(MONTH_BASELINE_FILE.read_text())
-        except (OSError, ValueError):
-            return {}
-
-    def _track_month(self, device_id: str, data: dict):
-        """Gắn charger.powerMonth / powerYear (kWh từ đầu tháng / đầu năm) vào dữ liệu MPPT.
-
-        Sang tháng/năm mới (hoặc lần đầu thấy thiết bị) mốc = total - today của lần
-        đọc đầu tiên, tức tổng lúc bắt đầu ngày đó — chính xác nếu service chạy
-        từ ngày 1; nếu bật muộn hơn thì thiếu phần các ngày trước đó.
-        """
+    def _track_battery_energy(self, device_id: str, data: dict):
+        """Gắn batToday/batMonth/batYear/batTotal (kWh thực vào ắc quy) vào dữ liệu MPPT."""
         charger = data.get("charger")
         if not charger:
             return
-        total, today = charger.get("powerTotal"), charger.get("powerToday")
-        if total is None or today is None:
+        totals = self.energy.update(device_id, charger)
+        if totals:
+            charger["batToday"], charger["batMonth"] = totals["today"], totals["month"]
+            charger["batYear"], charger["batTotal"] = totals["year"], totals["total"]
+
+    async def _sync_cloud_history(self):
+        """Kéo thống kê ngày/giờ từ cloud để vá dữ liệu khi máy không chạy."""
+        token = self.config.cloud_api_token
+        device_ids = [d for d, v in self.latest.items() if v.get("charger")]
+        if not device_ids:
+            _LOGGER.info("Cloud sync: chưa có thiết bị MPPT nào đọc được, bỏ qua lượt này")
             return
-        month, year = time.strftime("%Y-%m"), time.strftime("%Y")
-        entry = self._month_baseline.setdefault(device_id, {})
-        changed = False
-        if entry.get("month") != month:
-            entry["month"], entry["baseline"] = month, round(total - today, 3)
-            changed = True
-        if entry.get("year") != year:
-            entry["year"], entry["yearBaseline"] = year, round(total - today, 3)
-            changed = True
-        if changed:
+        now = time.time()
+        for device_id in device_ids:
+            rows = await cloud_sync.fetch_stats(
+                self._session, token, device_id, "1d", now - cloud_sync.DAILY_LOOKBACK_DAYS * 86400, now + 86400
+            )
+            self.energy.apply_cloud_days(device_id, cloud_sync.daily_kwh(rows))
+
+            filled = hourly = 0
+            if self.config.storage_enabled:
+                device_type = self.latest[device_id].get("_device_type")
+                rows = await cloud_sync.fetch_stats(
+                    self._session, token, device_id, "1h", now - cloud_sync.HOURLY_LOOKBACK_DAYS * 86400, now + 3600
+                )
+                days = set()
+                hourly = len(rows)
+                for r in rows:
+                    bucket, data = cloud_sync.hourly_row(r, device_type)
+                    if await self.storage.insert_hourly_if_missing(device_id, str(device_type), "local", bucket, data):
+                        filled += 1
+                        days.add(bucket - bucket % 86400)
+                for day in days:
+                    await self.storage.rollup_day(device_id, str(device_type), "local", day)
+            _LOGGER.info("Cloud sync %s: vá %d/%d giờ vào DB, cập nhật số liệu ngày", device_id, filled, hourly)
+
+    async def _run_cloud_sync(self):
+        """Đồng bộ khi khởi động và sau đó cloud_sync_per_day lần mỗi ngày (mặc định 4 = 6 giờ/lần)."""
+        interval = 86400 / self.config.cloud_sync_per_day
+        await asyncio.sleep(30)   # chờ vòng poll đầu tiên có dữ liệu
+        while True:
             try:
-                MONTH_BASELINE_FILE.write_text(json.dumps(self._month_baseline, indent=2))
-            except OSError as e:
-                _LOGGER.warning("Could not save month baseline: %s", e)
-        charger["powerMonth"] = round(max(0.0, total - entry["baseline"]), 3)
-        charger["powerYear"] = round(max(0.0, total - entry["yearBaseline"]), 3)
+                await self._sync_cloud_history()
+                delay = interval
+            except Exception as e:
+                _LOGGER.warning("Cloud sync thất bại, thử lại sau 10 phút: %s", e)
+                delay = 600
+            await asyncio.sleep(delay)
 
     async def _maybe_persist(self, device_id: str, mode: str, data: dict):
         """Ghi xuống DB tối đa 1 lần mỗi raw_persist_interval_seconds/thiết bị.
@@ -105,6 +121,9 @@ class Poller:
         for vp_cfg in self.config.viewpower_devices:
             self._tasks.append(asyncio.create_task(self._run_viewpower(vp_cfg)))
 
+        if self.config.cloud_api_token:
+            self._tasks.append(asyncio.create_task(self._run_cloud_sync()))
+
         if self.config.storage_enabled:
             self._tasks.append(asyncio.create_task(self._run_cleanup()))
             self._tasks.append(asyncio.create_task(self._run_rollup()))
@@ -117,6 +136,7 @@ class Poller:
                 await task
             except asyncio.CancelledError:
                 pass
+        self.energy.save()
 
         if self._cloud_client:
             await self._cloud_client.stop()
@@ -130,7 +150,7 @@ class Poller:
                 data = await api.fetch_data()
                 device_id = data.get("_device_id") or device.host
                 data["_name"] = device.name or device_id
-                self._track_month(device_id, data)
+                self._track_battery_energy(device_id, data)
                 self.latest[device_id] = data
                 await self._maybe_persist(device_id, "local", data)
             except Exception as e:
@@ -141,7 +161,7 @@ class Poller:
     async def _run_cloud(self):
         while True:
             for device_id, data in list(self._cloud_client.data.items()):
-                self._track_month(device_id, data)
+                self._track_battery_energy(device_id, data)
                 self.latest[device_id] = data
                 await self._maybe_persist(device_id, "cloud", data)
             await asyncio.sleep(self.config.poll_interval)
