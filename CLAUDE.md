@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## HARD RULES — MPPT device safety (critical)
+
+- **NEVER call any reset-type endpoint or any state-changing request on the MPPT device** (e.g. `/api/reset`, `/api/wifi/config`, `/api/wifi/scan`, OTA/update, factory/restart-like paths), not even via GET and not even "just to probe". A GET to `/api/reset` once reset the device (2026-10-02): it dropped off WiFi, lost its daily counter and part of its total counter, and needed manual intervention.
+- Firmware analysis (v2.3.3, 2026-10-02) shows the ESP exposes: `/api/status`, `/api/charger/data` (safe, read-only) and `/api/reset` (ties to "[WIFI] Resetting all configs" + restart), `/api/device/reset-id` (POST, generates a NEW random device ID), `/api/mqtt/config`, `/api/wifi/config`, `/api/wifi/scan`, `/api/stm32/ota/upload`, `/update` — **all of these except the first two are forbidden.** There is no history/log endpoint in the firmware.
+- The ONLY allowed requests to the MPPT's local HTTP server are the two known read-only endpoints: `GET /api/status` and `GET /api/charger/data`. Do not guess or enumerate other paths on the device; it is a small ESP that can hang or reboot under burst requests.
+- Any new device endpoint must be explicitly approved by the user first, one request at a time, never in a loop.
+
 ## Repository overview
 
 This repo contains **two separate, independently deployable implementations** that talk to the same physical hardware (Mạnh Quân Solar MPPT charger/inverter, plus an optional ViewPower/Vertiv-Liebert UPS):
