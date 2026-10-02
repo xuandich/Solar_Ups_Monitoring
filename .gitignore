@@ -9,3 +9,4 @@ mqsolar.db-wal
 mqsolar.service
 mqsolar.pid
 mqsolar.log
+mqsolar_month.json

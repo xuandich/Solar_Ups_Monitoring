@@ -52,6 +52,13 @@
   .kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent, var(--green)); }
   .kpi .label { color: var(--text-dim); font-size: 12.5px; font-weight: 500; }
   .kpi .value { font-size: 28px; font-weight: 800; margin-top: 6px; }
+  .kpi-row { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--card-border); }
+  .kpi-row:first-of-type { margin-top: 8px; }
+  .kpi-row .period { color: var(--text-dim); font-size: 12.5px; font-weight: 500; }
+  .kpi-row .v-energy, .kpi-row .v-money { text-align: right; }
+  .kpi-row .v-energy { font-size: 28px; font-weight: 800; margin-top: 4px; }
+  .kpi-row .v-money { font-size: 28px; font-weight: 800; color: var(--green); margin-top: 2px; }
+  .kpi-row .unit { font-size: 14px; margin-left: 4px; }
   .kpi .unit { font-size: 14px; color: var(--text-dim); font-weight: 600; margin-left: 4px; }
 
   .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
@@ -213,27 +220,30 @@
           </div>
           <div class="kpi" style="--accent:var(--amber)">
             <div class="label">Tổng công suất hiện tại</div>
-            <div class="value"><span id="kpiPower">--</span><span class="unit">W</span></div>
+            <div class="value" style="text-align:right"><span id="kpiPower">--</span><span class="unit">W</span></div>
           </div>
           <div class="kpi" style="--accent:var(--green)">
-            <div class="label">Điện năng hôm nay</div>
-            <div class="value"><span id="kpiToday">--</span><span class="unit">kWh</span></div>
-          </div>
-          <div class="kpi" style="--accent:var(--green)">
-            <div class="label">Tiền tiết kiệm hôm nay</div>
-            <div class="value"><span id="kpiSavingToday">--</span><span class="unit">VND</span></div>
-          </div>
-          <div class="kpi" style="--accent:var(--cyan)">
-            <div class="label">Điện năng tích luỹ</div>
-            <div class="value"><span id="kpiTotal">--</span><span class="unit">kWh</span></div>
-          </div>
-          <div class="kpi" style="--accent:var(--green)">
-            <div class="label">Tiền tiết kiệm</div>
-            <div class="value"><span id="kpiSaving">--</span><span class="unit">VND</span></div>
-          </div>
-          <div class="kpi" style="--accent:var(--blue)">
-            <div class="label">Thiết bị online</div>
-            <div class="value"><span id="kpiOnline">--</span><span class="unit" id="kpiOnlineUnit"></span></div>
+            <div class="label">Điện năng / Tiết kiệm</div>
+            <div class="kpi-row">
+              <div class="period">Hôm nay</div>
+              <div class="v-energy"><span id="kpiToday">--</span><span class="unit">kWh</span></div>
+              <div class="v-money"><span id="kpiSavingToday">--</span><span class="unit">VND</span></div>
+            </div>
+            <div class="kpi-row">
+              <div class="period">Tháng này</div>
+              <div class="v-energy"><span id="kpiMonth">--</span><span class="unit">kWh</span></div>
+              <div class="v-money"><span id="kpiSavingMonth">--</span><span class="unit">VND</span></div>
+            </div>
+            <div class="kpi-row">
+              <div class="period">Năm nay</div>
+              <div class="v-energy"><span id="kpiYear">--</span><span class="unit">kWh</span></div>
+              <div class="v-money"><span id="kpiSavingYear">--</span><span class="unit">VND</span></div>
+            </div>
+            <div class="kpi-row">
+              <div class="period">Tích luỹ</div>
+              <div class="v-energy"><span id="kpiTotal">--</span><span class="unit">kWh</span></div>
+              <div class="v-money"><span id="kpiSaving">--</span><span class="unit">VND</span></div>
+            </div>
           </div>
         </div>
         <div id="upsSection"></div>
@@ -288,6 +298,8 @@ function extractMetrics(data) {
       kind: "Charger",
       power: data.charger.chargingPower,
       today: data.charger.powerToday,
+      month: data.charger.powerMonth,
+      year: data.charger.powerYear,
       total: data.charger.powerTotal,
       batVoltage: data.charger.batVoltage,
       batCurrent: data.charger.batCurrent,
@@ -461,7 +473,7 @@ async function tick() {
   document.getElementById("content").style.display = "block";
   document.getElementById("emptyState").style.display = "none";
 
-  let totalPower = 0, totalToday = 0, totalTotal = 0, onlineCount = 0;
+  let totalPower = 0, totalToday = 0, totalMonth = 0, totalYear = 0, totalTotal = 0, onlineCount = 0;
   for (const device of devices) {
     const liveData = statusMap[device.device_id];
     const metrics = extractMetrics(liveData);
@@ -469,16 +481,21 @@ async function tick() {
       onlineCount++;
       totalPower += metrics.power || 0;
       totalToday += metrics.today || 0;
+      totalMonth += metrics.month || 0;
+      totalYear += metrics.year || 0;
       totalTotal += metrics.total || 0;
     }
   }
 
   document.getElementById("kpiPower").textContent = fmt(totalPower, 0);
   document.getElementById("kpiToday").textContent = fmt(totalToday, 2);
+  document.getElementById("kpiMonth").textContent = fmt(totalMonth, 2);
+  document.getElementById("kpiSavingMonth").textContent = Math.round(totalMonth * PRICE_PER_KWH_VND).toLocaleString("vi-VN");
+  document.getElementById("kpiYear").textContent = fmt(totalYear, 2);
+  document.getElementById("kpiSavingYear").textContent = Math.round(totalYear * PRICE_PER_KWH_VND).toLocaleString("vi-VN");
   document.getElementById("kpiTotal").textContent = fmt(totalTotal, 2);
   document.getElementById("kpiSavingToday").textContent = Math.round(totalToday * PRICE_PER_KWH_VND).toLocaleString("vi-VN");
   document.getElementById("kpiSaving").textContent = Math.round(totalTotal * PRICE_PER_KWH_VND).toLocaleString("vi-VN");
-  document.getElementById("kpiOnline").textContent = `${onlineCount}/${devices.length}`;
   document.getElementById("subLine").textContent = `${devices.length} thiết bị đã ghi nhận · ${onlineCount} đang online`;
 
   const isUps = (d) => d.device_type === "UPS" || !!(statusMap[d.device_id] && statusMap[d.device_id].ups);
