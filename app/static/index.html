@@ -34,6 +34,17 @@
   .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
   .topbar img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
   .topbar h1 { font-size: 20px; margin: 0; }
+  .topbar .title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .sync-btn { flex: none; width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--card-border);
+    background: var(--card); color: var(--text); cursor: pointer; font-size: 18px; line-height: 1; display: inline-flex;
+    align-items: center; justify-content: center; transition: border-color .2s, color .2s; }
+  .sync-btn:hover:not(:disabled) { border-color: var(--green); color: var(--green); }
+  .sync-btn:disabled { cursor: progress; opacity: .8; }
+  .sync-btn.spin .ico { display: inline-block; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .sync-msg { font-size: 12px; margin-top: 4px; min-height: 16px; color: var(--text-dim); }
+  .sync-msg.ok { color: var(--green); }
+  .sync-msg.err { color: var(--red); }
   .topbar .sub { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
 
   .kpi-grid {
@@ -214,8 +225,12 @@
         <div class="kpi-grid">
           <div class="topbar">
             <div>
-              <h1>Tổng quan hệ thống</h1>
+              <div class="title-row">
+                <h1>Tổng quan hệ thống</h1>
+                <button class="sync-btn" id="syncBtn" type="button" title="Đồng bộ và cập nhật số liệu mới nhất từ cloud và Google Drive" aria-label="Đồng bộ"><span class="ico">⟳</span></button>
+              </div>
               <div class="sub" id="subLine">Đang tải…</div>
+              <div class="sync-msg" id="syncMsg"></div>
             </div>
           </div>
           <div class="kpi" style="--accent:var(--amber)">
@@ -511,6 +526,38 @@ async function tick() {
 
   document.getElementById("upsSection").style.display = upsDevices.length ? "block" : "none";
 }
+
+// Nút đồng bộ: kéo số liệu mới nhất từ cloud + bản sao Google Drive rồi làm mới trang.
+(function () {
+  const btn = document.getElementById("syncBtn"), msg = document.getElementById("syncMsg");
+  const hhmm = (t) => new Date(t * 1000).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  const show = (text, cls) => { msg.textContent = text; msg.className = "sync-msg " + (cls || ""); };
+  btn.addEventListener("click", async () => {
+    btn.disabled = true; btn.classList.add("spin"); show("Đang đồng bộ…");
+    try {
+      const res = await fetch("/api/sync", { method: "POST" });
+      const r = await res.json();
+      const errs = Object.entries(r.errors || {});
+      if (errs.length) {
+        const names = { cloud: "Cloud", drive: "Google Drive", config: "Cấu hình", busy: "Bận" };
+        show(errs.map(([k, v]) => `${names[k] || k}: ${v}`).join(" · "), "err");
+      } else {
+        const parts = [];
+        if (r.cloud) parts.push("Cloud ✓");
+        if (r.drive) parts.push(`Drive ✓${r.drive.filled ? ` (vá ${r.drive.filled} giờ)` : ""}`);
+        const filled = (r.cloud && r.cloud.filled) || 0;
+        if (filled) parts.push(`vá ${filled} giờ từ cloud`);
+        show(`Đã đồng bộ lúc ${hhmm(r.at)} · ${parts.join(" · ")}`, "ok");
+      }
+      await tick();
+    } catch (e) {
+      show("Lỗi kết nối: " + e.message, "err");
+    } finally {
+      btn.disabled = false; btn.classList.remove("spin");
+    }
+  });
+  fetch("/api/sync").then(r => r.json()).then(r => { if (r && r.at) show(`Đồng bộ lần cuối ${hhmm(r.at)}`, r.ok ? "ok" : "err"); }).catch(() => {});
+})();
 
 tick();
 setInterval(tick, POLL_MS);

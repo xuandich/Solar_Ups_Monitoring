@@ -31,6 +31,15 @@ def create_app(poller: Poller, storage: Storage) -> FastAPI:
     async def status():
         return poller.latest
 
+    @app.post("/api/sync")
+    async def sync():
+        """Đồng bộ ngay từ cloud và Google Drive (không đụng tới thiết bị MPPT)."""
+        return await poller.sync_now()
+
+    @app.get("/api/sync")
+    async def sync_last():
+        return poller.last_sync or {}
+
     @app.get("/api/status/{device_id}")
     async def status_device(device_id: str):
         data = poller.latest.get(device_id)

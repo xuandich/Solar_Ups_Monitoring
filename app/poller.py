@@ -33,6 +33,8 @@ class Poller:
         self._cloud_client: MQSolarCloudClient | None = None
         self._last_persist: dict[str, float] = {}
         self.energy = EnergyTracker(ENERGY_FILE)
+        self._sync_lock = asyncio.Lock()
+        self.last_sync: dict | None = None
 
     def _track_battery_energy(self, device_id: str, data: dict):
         """Gắn batToday/batMonth/batYear/batTotal (kWh thực vào ắc quy) vào dữ liệu MPPT."""
@@ -50,13 +52,15 @@ class Poller:
         device_ids = [d for d, v in self.latest.items() if v.get("charger")]
         if not device_ids:
             _LOGGER.info("Cloud sync: chưa có thiết bị MPPT nào đọc được, bỏ qua lượt này")
-            return
+            return {"devices": 0, "days": 0, "hours": 0, "filled": 0}
         now = time.time()
+        summary = {"devices": 0, "days": 0, "hours": 0, "filled": 0}
         for device_id in device_ids:
             rows = await cloud_sync.fetch_stats(
                 self._session, token, device_id, "1d", now - cloud_sync.DAILY_LOOKBACK_DAYS * 86400, now + 86400
             )
             self.energy.apply_cloud_days(device_id, cloud_sync.daily_kwh(rows))
+            summary["days"] += len(rows)
 
             filled = hourly = 0
             if self.config.storage_enabled:
@@ -73,13 +77,18 @@ class Poller:
                         days.add(bucket - bucket % 86400)
                 for day in days:
                     await self.storage.rollup_day(device_id, str(device_type), "local", day)
+            summary["devices"] += 1
+            summary["hours"] += hourly
+            summary["filled"] += filled
             _LOGGER.info("Cloud sync %s: vá %d/%d giờ vào DB, cập nhật số liệu ngày", device_id, filled, hourly)
+        return summary
 
     async def _sync_drive_backup(self):
         """Đọc bản sao lưu trên Google Drive: kiểm tra chéo với DB local và vá số liệu còn thiếu."""
         cfg = self.config
         device_ids = [d for d, v in self.latest.items() if v.get("charger")]
         now = time.time()
+        summary = {"devices": 0, "hours": 0, "days": 0, "filled": 0, "checked": 0, "mismatched": 0}
         for device_id in device_ids:
             body = await drive_sync.fetch_backup(
                 self._session, cfg.drive_backup_url, cfg.drive_backup_key, device_id,
@@ -113,6 +122,37 @@ class Poller:
                     await self.storage.rollup_day(device_id, str(device_type), "local", day)
             _LOGGER.info("Drive backup %s: %d giờ / %d ngày; vá %d giờ; so khớp %d giờ (lệch %d)",
                          device_id, len(hourly_rows), len(daily_rows), filled, checked, mismatched)
+            for k, v in (("devices", 1), ("hours", len(hourly_rows)), ("days", len(daily_rows)),
+                         ("filled", filled), ("checked", checked), ("mismatched", mismatched)):
+                summary[k] += v
+        return summary
+
+    async def sync_now(self) -> dict:
+        """Đồng bộ ngay theo yêu cầu (nút trên dashboard): cloud REST API + bản sao Google Drive.
+
+        Chỉ gọi cloud/Google, KHÔNG gửi gì tới thiết bị MPPT. Một lượt tại một thời điểm.
+        """
+        has_cloud = bool(self.config.cloud_api_token)
+        has_drive = bool(self.config.drive_backup_url and self.config.drive_backup_key)
+        if not (has_cloud or has_drive):
+            return {"ok": False, "configured": False, "errors": {"config": "Chưa cấu hình [cloud_api] hoặc [drive_backup]"}}
+        if self._sync_lock.locked():
+            return {"ok": False, "busy": True, "errors": {"busy": "Đang có một lượt đồng bộ khác"}}
+        async with self._sync_lock:
+            result: dict = {"cloud": None, "drive": None, "errors": {}}
+            for name, enabled, fn in (("cloud", has_cloud, self._sync_cloud_history),
+                                      ("drive", has_drive, self._sync_drive_backup)):
+                if not enabled:
+                    continue
+                try:
+                    result[name] = await fn()
+                except Exception as e:
+                    result["errors"][name] = str(e)[:200]
+                    _LOGGER.warning("Đồng bộ thủ công (%s) thất bại: %s", name, e)
+            result["ok"] = not result["errors"]
+            result["at"] = time.time()
+            self.last_sync = result
+            return result
 
     async def _run_cloud_sync(self):
         """Đồng bộ khi khởi động và sau đó cloud_sync_per_day lần mỗi ngày (mặc định 4 = 6 giờ/lần):
