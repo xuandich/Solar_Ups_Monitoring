@@ -16,6 +16,10 @@ from .viewpower_client import fetch_work_info, normalize_viewpower
 
 _LOGGER = logging.getLogger(__name__)
 
+
+class _NoDevice(Exception):
+    """Chưa đọc được thiết bị MPPT nào (vd: vừa bật máy, mạng/thiết bị chưa sẵn sàng)."""
+
 # Điện năng thực vào ắc quy tự tích phân + vá khi tạm dừng: xem app/energy.py.
 ENERGY_FILE = Path(__file__).resolve().parent.parent / "mqsolar_energy.json"
 
@@ -51,8 +55,7 @@ class Poller:
         token = self.config.cloud_api_token
         device_ids = [d for d, v in self.latest.items() if v.get("charger")]
         if not device_ids:
-            _LOGGER.info("Cloud sync: chưa có thiết bị MPPT nào đọc được, bỏ qua lượt này")
-            return {"devices": 0, "days": 0, "hours": 0, "filled": 0}
+            raise _NoDevice("chưa đọc được thiết bị MPPT nào, sẽ thử lại")
         now = time.time()
         summary = {"devices": 0, "days": 0, "hours": 0, "filled": 0}
         for device_id in device_ids:
@@ -72,7 +75,7 @@ class Poller:
                 hourly = len(rows)
                 for r in rows:
                     bucket, data = cloud_sync.hourly_row(r, device_type)
-                    if await self.storage.insert_hourly_if_missing(device_id, str(device_type), "local", bucket, data):
+                    if await self.storage.upsert_cloud_hourly(device_id, str(device_type), "local", bucket, data, self.config.raw_persist_interval_seconds):
                         filled += 1
                         days.add(bucket - bucket % 86400)
                 for day in days:
@@ -87,6 +90,8 @@ class Poller:
         """Đọc bản sao lưu trên Google Drive: kiểm tra chéo với DB local và vá số liệu còn thiếu."""
         cfg = self.config
         device_ids = [d for d, v in self.latest.items() if v.get("charger")]
+        if not device_ids:
+            raise _NoDevice("chưa đọc được thiết bị MPPT nào, sẽ thử lại")
         now = time.time()
         summary = {"devices": 0, "hours": 0, "days": 0, "filled": 0, "checked": 0, "mismatched": 0}
         for device_id in device_ids:
@@ -102,7 +107,7 @@ class Poller:
                 days = set()
                 for r in hourly_rows:
                     bucket, data = cloud_sync.hourly_row(r, device_type)
-                    if await self.storage.insert_hourly_if_missing(device_id, str(device_type), "local", bucket, data):
+                    if await self.storage.upsert_cloud_hourly(device_id, str(device_type), "local", bucket, data, self.config.raw_persist_interval_seconds):
                         filled += 1
                         days.add(bucket - bucket % 86400)
                         continue
@@ -156,24 +161,43 @@ class Poller:
 
     async def _run_cloud_sync(self):
         """Đồng bộ khi khởi động và sau đó cloud_sync_per_day lần mỗi ngày (mặc định 4 = 6 giờ/lần):
-        cloud REST API (nếu có token) và bản sao lưu Google Drive (nếu có [drive_backup])."""
+        cloud REST API (nếu có token) và bản sao Google Drive (nếu có [drive_backup]).
+
+        Lịch tính theo GIỜ THỰC (time.time) và kiểm tra mỗi 30 giây, không dùng một lần
+        asyncio.sleep dài: bộ đếm của asyncio không chạy khi máy ngủ (suspend) nên lượt
+        đồng bộ sẽ bị trễ hàng giờ. Phát hiện máy vừa thức dậy (đồng hồ nhảy quá 2 phút
+        giữa hai lần kiểm tra) thì đồng bộ sớm, sau ~30 giây để mạng kịp kết nối lại.
+        """
         interval = 86400 / self.config.cloud_sync_per_day
+        tick = 30.0
         await asyncio.sleep(30)   # chờ vòng poll đầu tiên có dữ liệu
+        next_due = time.time()
+        last_check = time.time()
         while True:
-            ok = True
-            if self.config.cloud_api_token:
-                try:
-                    await self._sync_cloud_history()
-                except Exception as e:
-                    ok = False
-                    _LOGGER.warning("Cloud sync thất bại, thử lại sau 10 phút: %s", e)
-            if self.config.drive_backup_url and self.config.drive_backup_key:
-                try:
-                    await self._sync_drive_backup()
-                except Exception as e:
-                    ok = False
-                    _LOGGER.warning("Drive backup sync thất bại, thử lại sau 10 phút: %s", e)
-            await asyncio.sleep(interval if ok else 600)
+            now = time.time()
+            if now - last_check > 4 * tick:   # chỉ đo quãng ngủ giữa 2 lần kiểm tra (không tính thời gian đồng bộ)
+                next_due = min(next_due, now + tick)
+                _LOGGER.info("Phát hiện máy vừa thức dậy sau %.0f phút, sẽ đồng bộ sớm", (now - last_check) / 60)
+            if now >= next_due:
+                ok, retry = True, 600
+                async with self._sync_lock:   # chung khoá với nút đồng bộ thủ công, không chạy song song
+                    for enabled, label, fn in (
+                        (bool(self.config.cloud_api_token), "Cloud sync", self._sync_cloud_history),
+                        (bool(self.config.drive_backup_url and self.config.drive_backup_key), "Drive backup sync", self._sync_drive_backup),
+                    ):
+                        if not enabled:
+                            continue
+                        try:
+                            await fn()
+                        except _NoDevice as e:
+                            ok, retry = False, 60
+                            _LOGGER.info("%s: %s", label, e)
+                        except Exception as e:
+                            ok = False
+                            _LOGGER.warning("%s thất bại, thử lại sau %d phút: %s", label, retry // 60, e)
+                next_due = time.time() + (interval if ok else retry)
+            last_check = time.time()
+            await asyncio.sleep(tick)
 
     async def _maybe_persist(self, device_id: str, mode: str, data: dict):
         """Ghi xuống DB tối đa 1 lần mỗi raw_persist_interval_seconds/thiết bị.

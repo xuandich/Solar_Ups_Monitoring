@@ -61,4 +61,5 @@ def hourly_row(r: dict, device_type) -> tuple[float, dict]:
         if k in charger:
             charger[k] = round(charger[k] * BATTERY_SIDE_FACTOR, 4)
     charger["statusText"] = "CHARGING" if r.get("last_status") == 1 else "IDLE"
-    return bucket, {"charger": charger, "hasData": True, "_device_type": device_type, "_scaled": BATTERY_SIDE_FACTOR}
+    return bucket, {"charger": charger, "hasData": True, "_device_type": device_type,
+                    "_scaled": BATTERY_SIDE_FACTOR, "_samples": r.get("sample_count")}

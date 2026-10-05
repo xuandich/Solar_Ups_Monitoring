@@ -234,6 +234,41 @@ class Storage:
         await self._conn.commit()
         return cur.rowcount > 0
 
+    async def upsert_cloud_hourly(self, device_id: str, device_type: str | None, mode: str, bucket_start: float,
+                                  data: dict, raw_interval: float = 120.0) -> bool:
+        """Chèn/cập nhật dòng theo giờ lấy từ cloud/Drive. Trả True nếu có chèn hoặc cập nhật.
+
+        - Chưa có dòng: chèn.
+        - Đã có dòng cùng nguồn (`_scaled`): thay nếu dòng mới đầy đủ hơn (nhiều mẫu hơn).
+        - Đã có dòng đo ở local: giữ nguyên, TRỪ khi dòng local chỉ phủ một phần giờ (service bị
+          dừng giữa giờ nên chỉ có vài mẫu thô) còn cloud phủ đủ lâu hơn nhiều: khi đó dùng cloud
+          vì trung bình cả giờ chính xác hơn. Mỗi dòng cloud (5 phút/mẫu) = 300 giây phủ.
+        """
+        existing = await self.get_hourly(device_id, bucket_start)
+        if existing is None:
+            return await self.insert_hourly_if_missing(device_id, device_type, mode, bucket_start, data)
+        cloud_samples = data.get("_samples") or 0
+        replace = False
+        if existing.get("_scaled"):
+            replace = cloud_samples > (existing.get("_samples") or 0)
+        else:
+            cloud_cover = cloud_samples * 300.0
+            async with self._conn.execute(
+                "SELECT COUNT(*) FROM readings WHERE device_id = ? AND ts >= ? AND ts < ?",
+                (device_id, bucket_start, bucket_start + HOUR_SECONDS),
+            ) as cursor:
+                n_raw = (await cursor.fetchone())[0]
+            local_cover = n_raw * raw_interval
+            replace = cloud_cover >= 1800 and local_cover < 0.6 * cloud_cover
+        if not replace:
+            return False
+        await self._conn.execute(
+            "UPDATE hourly_readings SET data = ? WHERE device_id = ? AND bucket_start = ?",
+            (json.dumps(data), device_id, bucket_start),
+        )
+        await self._conn.commit()
+        return True
+
     async def get_hourly(self, device_id: str, bucket_start: float) -> dict | None:
         async with self._conn.execute(
             "SELECT data FROM hourly_readings WHERE device_id = ? AND bucket_start = ?", (device_id, bucket_start)

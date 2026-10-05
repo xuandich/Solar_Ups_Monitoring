@@ -136,13 +136,15 @@ class EnergyTracker:
         return {k: round(v / 1000, 3) for k, v in out.items()}
 
     def apply_cloud_days(self, device_id: str, daily_kwh: dict[str, float]):
-        """daily_kwh: {YYYY-MM-DD: kwh_today theo cloud (phía PV)} → Wh phía ắc quy."""
+        """daily_kwh: {YYYY-MM-DD: kwh_today theo cloud (phía PV)} → Wh phía ắc quy (giữ số lớn nhất)."""
         days = self._entry(device_id)["days"]
         for day, kwh in daily_kwh.items():
             if day not in days:
                 d = days[day] = self._new_day()
                 d["flag"] = True   # không có số đo local nào cho ngày này
-            days[day]["cloud"] = kwh * 1000 * BATTERY_SIDE_FACTOR
+            # Trong 1 ngày kWh chỉ tăng; cloud REST (mới) và bản sao Drive (có thể cũ vài giờ)
+            # cùng ghi vào đây, nên giữ số lớn hơn để số cũ không ghi đè số mới.
+            days[day]["cloud"] = max(days[day].get("cloud") or 0.0, kwh * 1000 * BATTERY_SIDE_FACTOR)
         self.save()
 
     def known_days(self, device_id: str) -> set[str]:
