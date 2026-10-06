@@ -147,15 +147,29 @@ class MQSolarCloudClient:
             _LOGGER.error("Failed to connect to MQ Solar Cloud: %s", e)
             return False
 
+    async def _drop_ws(self):
+        """Đóng và bỏ kết nối hiện tại để vòng lặp _listen tự kết nối lại."""
+        ws, self._ws = self._ws, None
+        if ws is not None:
+            try:
+                await ws.close()
+            except Exception:
+                pass
+
     async def _listen(self):
+        # Không bao giờ thoát khi kết nối rớt (máy ngủ, đổi mạng, cloud đóng): luôn đóng kết nối
+        # cũ rồi kết nối lại, nếu không thì sẽ không còn nhận được bản tin nào nữa.
         while not self._closing:
             if not self._ws or self._ws.closed:
                 _LOGGER.info("WebSocket closed, reconnecting...")
-                if await self.connect():
-                    continue
-                else:
+                try:
+                    ok = await asyncio.wait_for(self.connect(), timeout=30)
+                except Exception as e:  # mạng chưa sẵn sàng / đang đổi mạng
+                    _LOGGER.warning("WebSocket reconnect failed: %s", e)
+                    ok = False
+                if not ok:
                     await asyncio.sleep(10)
-                    continue
+                continue
 
             try:
                 msg = await self._ws.receive(timeout=60)
@@ -165,19 +179,20 @@ class MQSolarCloudClient:
                         normalized = normalize_data(data)
                         self.data[data["deviceId"]] = normalized
                     elif data.get("ok") and "subscribed" in data:
-                         _LOGGER.info("Successfully subscribed to devices: %s", data["subscribed"])
+                        _LOGGER.info("Successfully subscribed to devices: %s", data["subscribed"])
                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR, aiohttp.WSMsgType.CLOSING):
-                    _LOGGER.warning("WebSocket connection event: %s", msg.type)
-                    break
+                    _LOGGER.warning("WebSocket connection event: %s, will reconnect", msg.type)
+                    await self._drop_ws()
+                    await asyncio.sleep(2)
             except asyncio.TimeoutError:
                 # Heartbeat or timeout
                 continue
+            except asyncio.CancelledError:
+                raise
             except Exception as e:
-                _LOGGER.error("WebSocket receive error: %s", e)
-                break
-        
-        if not self._closing:
-             _LOGGER.warning("WebSocket listen loop ended, will retry connection")
+                _LOGGER.error("WebSocket receive error: %s, will reconnect", e)
+                await self._drop_ws()
+                await asyncio.sleep(5)
 
     async def stop(self):
         self._closing = True
