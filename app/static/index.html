@@ -238,7 +238,7 @@
             <div class="value" style="text-align:right"><span id="kpiPower">--</span><span class="unit">W</span></div>
           </div>
           <div class="kpi" style="--accent:var(--green)">
-            <div class="label">Điện năng / Tiết kiệm</div>
+            <div class="label" id="kpiEnergyLabel">Điện năng / Tiết kiệm</div>
             <div class="kpi-row">
               <div class="period">Hôm nay</div>
               <div class="v-energy"><span id="kpiToday">--</span><span class="unit">kWh</span></div>
@@ -490,7 +490,7 @@ async function tick() {
   document.getElementById("content").style.display = "block";
   document.getElementById("emptyState").style.display = "none";
 
-  let totalPower = 0, totalToday = 0, totalMonth = 0, totalYear = 0, totalTotal = 0, onlineCount = 0;
+  let totalPower = 0, totalToday = 0, totalMonth = 0, totalYear = 0, totalTotal = 0, onlineCount = 0, offlineEnergy = false;
   for (const device of devices) {
     const liveData = statusMap[device.device_id];
     const metrics = extractMetrics(liveData);
@@ -501,8 +501,17 @@ async function tick() {
       totalMonth += metrics.month || 0;
       totalYear += metrics.year || 0;
       totalTotal += metrics.total || 0;
+    } else if (liveData && liveData._offline && metrics) {
+      // Thiết bị mất kết nối: vẫn cộng số điện năng ĐÃ LƯU (không có công suất tức thời).
+      offlineEnergy = true;
+      totalToday += metrics.today || 0;
+      totalMonth += metrics.month || 0;
+      totalYear += metrics.year || 0;
+      totalTotal += metrics.total || 0;
     }
   }
+  document.getElementById("kpiEnergyLabel").textContent =
+    offlineEnergy ? "Điện năng / Tiết kiệm · số đã lưu (MPPT mất kết nối)" : "Điện năng / Tiết kiệm";
 
   document.getElementById("kpiPower").textContent = fmt(totalPower, 0);
   document.getElementById("kpiToday").textContent = fmt(totalToday, 3);

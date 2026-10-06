@@ -29,7 +29,7 @@ def create_app(poller: Poller, storage: Storage) -> FastAPI:
 
     @app.get("/api/status")
     async def status():
-        return poller.latest
+        return poller.status_snapshot()
 
     @app.post("/api/sync")
     async def sync():

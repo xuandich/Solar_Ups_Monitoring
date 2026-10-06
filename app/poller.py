@@ -50,10 +50,35 @@ class Poller:
             charger["batToday"], charger["batMonth"] = totals["today"], totals["month"]
             charger["batYear"], charger["batTotal"] = totals["year"], totals["total"]
 
+    def charger_ids(self) -> list[str]:
+        """MPPT đã biết: đang đọc được ở local/cloud HOẶC đã từng ghi nhận (số điện năng đã lưu).
+        Nhờ vậy đồng bộ cloud/Drive vẫn chạy khi máy ở mạng khác và không với tới thiết bị."""
+        ids = [d for d, v in self.latest.items() if v.get("charger")]
+        ids += [d for d in self.energy.state if d not in ids]
+        return ids
+
+    def _device_type(self, device_id: str):
+        return self.latest.get(device_id, {}).get("_device_type", 0)
+
+    def status_snapshot(self) -> dict:
+        """latest + (với MPPT đã biết nhưng đang mất kết nối) một bản ghi `_offline` chỉ chứa
+        số điện năng đã lưu, để dashboard không hiện toàn số 0."""
+        out = dict(self.latest)
+        for device_id in self.energy.state:
+            if device_id in out and out[device_id].get("charger"):
+                continue
+            t = self.energy.totals(device_id)
+            out[device_id] = {
+                "_offline": True, "hasData": False, "_device_id": device_id, "_device_type": 0,
+                "_name": f"MPPT ({device_id})",
+                "charger": {"batToday": t["today"], "batMonth": t["month"], "batYear": t["year"], "batTotal": t["total"]},
+            }
+        return out
+
     async def _sync_cloud_history(self):
         """Kéo thống kê ngày/giờ từ cloud để vá dữ liệu khi máy không chạy."""
         token = self.config.cloud_api_token
-        device_ids = [d for d, v in self.latest.items() if v.get("charger")]
+        device_ids = self.charger_ids()
         if not device_ids:
             raise _NoDevice("chưa đọc được thiết bị MPPT nào, sẽ thử lại")
         now = time.time()
@@ -67,7 +92,7 @@ class Poller:
 
             filled = hourly = 0
             if self.config.storage_enabled:
-                device_type = self.latest[device_id].get("_device_type")
+                device_type = self._device_type(device_id)
                 rows = await cloud_sync.fetch_stats(
                     self._session, token, device_id, "1h", now - cloud_sync.HOURLY_LOOKBACK_DAYS * 86400, now + 3600
                 )
@@ -89,7 +114,7 @@ class Poller:
     async def _sync_drive_backup(self):
         """Đọc bản sao lưu trên Google Drive: kiểm tra chéo với DB local và vá số liệu còn thiếu."""
         cfg = self.config
-        device_ids = [d for d, v in self.latest.items() if v.get("charger")]
+        device_ids = self.charger_ids()
         if not device_ids:
             raise _NoDevice("chưa đọc được thiết bị MPPT nào, sẽ thử lại")
         now = time.time()
@@ -103,7 +128,7 @@ class Poller:
             self.energy.apply_cloud_days(device_id, cloud_sync.daily_kwh(daily_rows))
             filled = checked = mismatched = 0
             if cfg.storage_enabled:
-                device_type = self.latest[device_id].get("_device_type")
+                device_type = self._device_type(device_id)
                 days = set()
                 for r in hourly_rows:
                     bucket, data = cloud_sync.hourly_row(r, device_type)
