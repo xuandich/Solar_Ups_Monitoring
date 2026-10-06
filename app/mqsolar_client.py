@@ -3,6 +3,7 @@ import asyncio
 import async_timeout
 import aiohttp
 import json
+import time
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -120,6 +121,7 @@ class MQSolarCloudClient:
         self.device_ids = device_ids
         self.session = session
         self.data = {}  # device_id -> normalized_data
+        self.data_ts = {}  # device_id -> thời điểm (time.time) nhận bản tin cuối
         self._ws = None
         self._listen_task = None
         self._closing = False
@@ -167,6 +169,7 @@ class MQSolarCloudClient:
                     if "deviceId" in data:
                         normalized = normalize_data(data)
                         self.data[data["deviceId"]] = normalized
+                        self.data_ts[data["deviceId"]] = time.time()
                     elif data.get("ok") and "subscribed" in data:
                         _LOGGER.info("Successfully subscribed to devices: %s", data["subscribed"])
                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR, aiohttp.WSMsgType.CLOSING):

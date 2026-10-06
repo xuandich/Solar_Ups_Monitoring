@@ -17,6 +17,14 @@ from .viewpower_client import fetch_work_info, normalize_viewpower
 _LOGGER = logging.getLogger(__name__)
 
 
+# Local ưu tiên; chỉ dùng cloud khi local không đọc được quá LOCAL_FRESH_SECONDS.
+# Số cloud chỉ dùng khi bản tin còn mới (CLOUD_FRESH_SECONDS), để không hiển thị/tích phân số cũ
+# khi thiết bị thật ra đã offline. Bản ghi live quá STALE_SECONDS không được cập nhật => coi như mất kết nối.
+LOCAL_FRESH_SECONDS = 15.0
+CLOUD_FRESH_SECONDS = 10.0
+STALE_SECONDS = 30.0
+
+
 class _NoDevice(Exception):
     """Chưa đọc được thiết bị MPPT nào (vd: vừa bật máy, mạng/thiết bị chưa sẵn sàng)."""
 
@@ -39,6 +47,8 @@ class Poller:
         self.energy = EnergyTracker(ENERGY_FILE)
         self._sync_lock = asyncio.Lock()
         self.last_sync: dict | None = None
+        self._local_ok_at: dict[str, float] = {}   # lần cuối đọc local thành công
+        self._names: dict[str, str] = {}           # tên hiển thị đã biết (từ cấu hình local)
 
     def _track_battery_energy(self, device_id: str, data: dict):
         """Gắn batToday/batMonth/batYear/batTotal (kWh thực vào ắc quy) vào dữ liệu MPPT."""
@@ -61,16 +71,26 @@ class Poller:
         return self.latest.get(device_id, {}).get("_device_type", 0)
 
     def status_snapshot(self) -> dict:
-        """latest + (với MPPT đã biết nhưng đang mất kết nối) một bản ghi `_offline` chỉ chứa
-        số điện năng đã lưu, để dashboard không hiện toàn số 0."""
-        out = dict(self.latest)
+        """latest + xử lý thiết bị mất kết nối:
+        - MPPT không còn cập nhật (quá STALE_SECONDS) hoặc chưa từng đọc được trong lần chạy này:
+          bản ghi `_offline` chỉ chứa số điện năng đã lưu, để dashboard không hiện toàn số 0.
+        - Thiết bị khác (UPS) không còn cập nhật: giữ dữ liệu cũ nhưng `hasData = False`.
+        """
+        now = time.time()
+        out: dict = {}
+        for device_id, v in self.latest.items():
+            stale = now - v.get("_ts", now) > STALE_SECONDS
+            if not stale:
+                out[device_id] = v
+            elif not v.get("charger"):
+                out[device_id] = {**v, "hasData": False, "_stale": True}
         for device_id in self.energy.state:
-            if device_id in out and out[device_id].get("charger"):
+            if device_id in out:
                 continue
             t = self.energy.totals(device_id)
             out[device_id] = {
                 "_offline": True, "hasData": False, "_device_id": device_id, "_device_type": 0,
-                "_name": f"MPPT ({device_id})",
+                "_name": self._names.get(device_id, f"MPPT ({device_id})"),
                 "charger": {"batToday": t["today"], "batMonth": t["month"], "batYear": t["year"], "batTotal": t["total"]},
             }
         return out
@@ -286,6 +306,9 @@ class Poller:
                 data = await api.fetch_data()
                 device_id = data.get("_device_id") or device.host
                 data["_name"] = device.name or device_id
+                data["_source"], data["_ts"] = "local", time.time()
+                self._names[device_id] = data["_name"]
+                self._local_ok_at[device_id] = data["_ts"]
                 self._track_battery_energy(device_id, data)
                 self.latest[device_id] = data
                 await self._maybe_persist(device_id, "local", data)
@@ -295,8 +318,20 @@ class Poller:
             await asyncio.sleep(self.config.poll_interval)
 
     async def _run_cloud(self):
+        """Nguồn dự phòng: realtime từ cloud WebSocket, dùng khi local không đọc được (vd: máy đang ở
+        mạng khác). Local luôn được ưu tiên khi còn đọc được; bản tin cloud cũ bị bỏ qua."""
         while True:
-            for device_id, data in list(self._cloud_client.data.items()):
+            now = time.time()
+            for device_id, raw in list(self._cloud_client.data.items()):
+                if now - self._cloud_client.data_ts.get(device_id, 0) > CLOUD_FRESH_SECONDS:
+                    continue   # cloud không còn gửi (thiết bị offline): không dùng số cũ
+                if now - self._local_ok_at.get(device_id, 0) <= LOCAL_FRESH_SECONDS:
+                    continue   # local đang đọc được: ưu tiên local
+                data = dict(raw)
+                if data.get("charger"):
+                    data["_device_type"] = 0   # cùng kiểu với local để không lệch giữa 2 nguồn
+                data["_name"] = self._names.get(device_id, f"MPPT Charger ({device_id})")
+                data["_source"], data["_ts"] = "cloud", now
                 self._track_battery_energy(device_id, data)
                 self.latest[device_id] = data
                 await self._maybe_persist(device_id, "cloud", data)
@@ -310,6 +345,7 @@ class Poller:
                 data = normalize_viewpower(work_info, nominal_watts=vp_cfg.nominal_watts)
                 data["_device_id"] = device_id
                 data["_name"] = vp_cfg.name or f"UPS {device_id}"
+                data["_ts"] = time.time()
                 self.latest[device_id] = data
 
                 # UPS: chỉ lưu lịch sử + cho biểu đồ mục Load, các trường

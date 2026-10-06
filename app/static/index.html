@@ -522,7 +522,9 @@ async function tick() {
   document.getElementById("kpiTotal").textContent = fmt(totalTotal, 3);
   document.getElementById("kpiSavingToday").textContent = Math.round(totalToday * PRICE_PER_KWH_VND).toLocaleString("vi-VN");
   document.getElementById("kpiSaving").textContent = Math.round(totalTotal * PRICE_PER_KWH_VND).toLocaleString("vi-VN");
-  document.getElementById("subLine").textContent = `${devices.length} thiết bị đã ghi nhận · ${onlineCount} đang online`;
+  const viaCloud = Object.values(statusMap).some(v => v.charger && v.hasData && v._source === "cloud");
+  document.getElementById("subLine").textContent =
+    `${devices.length} thiết bị đã ghi nhận · ${onlineCount} đang online` + (viaCloud ? " · MPPT qua cloud" : "");
 
   const isUps = (d) => d.device_type === "UPS" || !!(statusMap[d.device_id] && statusMap[d.device_id].ups);
   const isCharger = (d) => !!(statusMap[d.device_id] && statusMap[d.device_id].charger);
