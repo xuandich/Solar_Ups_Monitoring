@@ -118,6 +118,13 @@ class Poller:
                 )
                 days = set()
                 hourly = len(rows)
+                try:   # trung bình giờ chính xác hơn: tính lại từ khoảng 5 phút, PV null = 0
+                    five = await cloud_sync.fetch_five_minute(
+                        self._session, token, device_id, now - cloud_sync.HOURLY_LOOKBACK_DAYS * 86400, now + 300
+                    )
+                    rows = cloud_sync.zero_fill_hourly(rows, five)
+                except Exception as e:
+                    _LOGGER.warning("Không lấy được dữ liệu 5 phút để tính lại trung bình giờ: %s", e)
                 for r in rows:
                     bucket, data = cloud_sync.hourly_row(r, device_type)
                     if await self.storage.upsert_cloud_hourly(device_id, str(device_type), "local", bucket, data, self.config.raw_persist_interval_seconds):

@@ -549,15 +549,16 @@ async function tick() {
       const res = await fetch("/api/sync", { method: "POST" });
       const r = await res.json();
       const errs = Object.entries(r.errors || {});
+      const names = { cloud: "Cloud", drive: "Google Drive", config: "Cấu hình", busy: "Bận" };
+      const parts = [];
+      if (r.cloud) parts.push("Cloud ✓");
+      if (r.drive) parts.push(`Drive ✓${r.drive.filled ? ` (vá ${r.drive.filled} giờ)` : ""}`);
+      if (r.cloud && r.cloud.filled) parts.push(`vá ${r.cloud.filled} giờ từ cloud`);
       if (errs.length) {
-        const names = { cloud: "Cloud", drive: "Google Drive", config: "Cấu hình", busy: "Bận" };
-        show(errs.map(([k, v]) => `${names[k] || k}: ${v}`).join(" · "), "err");
+        // Một nguồn lỗi (vd Drive tạm thời) thì vẫn cho thấy nguồn còn lại đã đồng bộ được.
+        const bad = errs.map(([k, v]) => `${names[k] || k} ✗ ${v}`);
+        show(`${parts.length ? "Đã đồng bộ một phần lúc " + hhmm(r.at || Date.now() / 1000) + ": " + parts.join(" · ") + " · " : ""}${bad.join(" · ")}`, "err");
       } else {
-        const parts = [];
-        if (r.cloud) parts.push("Cloud ✓");
-        if (r.drive) parts.push(`Drive ✓${r.drive.filled ? ` (vá ${r.drive.filled} giờ)` : ""}`);
-        const filled = (r.cloud && r.cloud.filled) || 0;
-        if (filled) parts.push(`vá ${filled} giờ từ cloud`);
         show(`Đã đồng bộ lúc ${hhmm(r.at)} · ${parts.join(" · ")}`, "ok");
       }
       await tick();

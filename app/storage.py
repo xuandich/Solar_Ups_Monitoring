@@ -239,7 +239,8 @@ class Storage:
         """Chèn/cập nhật dòng theo giờ lấy từ cloud/Drive. Trả True nếu có chèn hoặc cập nhật.
 
         - Chưa có dòng: chèn.
-        - Đã có dòng cùng nguồn (`_scaled`): thay nếu dòng mới đầy đủ hơn (nhiều mẫu hơn).
+        - Đã có dòng cùng nguồn (`_scaled`): thay nếu dòng mới đầy đủ hơn (nhiều mẫu hơn) hoặc đã được
+          tính lại với PV null = 0 (`_zeroFilled`) trong khi dòng cũ chưa.
         - Đã có dòng đo ở local: giữ nguyên, TRỪ khi dòng local chỉ phủ một phần giờ (service bị
           dừng giữa giờ nên chỉ có vài mẫu thô) còn cloud phủ đủ lâu hơn nhiều: khi đó dùng cloud
           vì trung bình cả giờ chính xác hơn. Mỗi dòng cloud (5 phút/mẫu) = 300 giây phủ.
@@ -250,7 +251,9 @@ class Storage:
         cloud_samples = data.get("_samples") or 0
         replace = False
         if existing.get("_scaled"):
-            replace = cloud_samples > (existing.get("_samples") or 0)
+            existing_samples = existing.get("_samples") or 0
+            replace = cloud_samples > existing_samples or (
+                data.get("_zeroFilled") and not existing.get("_zeroFilled") and cloud_samples >= existing_samples)
         else:
             cloud_cover = cloud_samples * 300.0
             async with self._conn.execute(
