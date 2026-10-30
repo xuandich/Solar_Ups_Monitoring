@@ -144,17 +144,17 @@
 
   /* Ô tròn "Solar" (không có sẵn trong statusbg.png gốc) + đường dây ngang
      nối sang Battery — cùng kích thước với circle Input, nằm trên hàng
-     Battery, canh giữa ô trái của khung (giữa mép trong đường dọc trái
-     x=20 và đường dọc Battery x=262 trên ảnh 541px). Dây màu xám #c0bbc1
-     giống các đường chưa hoạt động của ảnh gốc. */
+     Battery, canh giữa ô trái của khung (giữa mép trong đường dọc Inverter
+     dưới icon Input x=78 và đường dọc Battery x=262 trên ảnh 541px). Dây
+     màu xám #c0bbc1 giống các đường chưa hoạt động của ảnh gốc. */
   .ups-diagram-img .ov-solar-line, .ups-diagram-img .ov-solar-anim {
-    top: 74.71%; left: 31.79%; width: 11.83%; height: 4.94%;
+    top: 74.71%; left: 37.15%; width: 6.47%; height: 4.94%;
   }
   .ups-diagram-img .ov-solar-line {
     position: absolute; background: #c0bbc1;
   }
   .ups-diagram-img .solar-circle {
-    position: absolute; top: 67.44%; left: 19.87%; width: 12.38%; height: 19.48%;
+    position: absolute; top: 67.44%; left: 25.23%; width: 12.38%; height: 19.48%;
     border-radius: 50%; background: #b5aecd; display: flex; align-items: center; justify-content: center;
   }
   .ups-diagram-img .solar-circle svg { width: 55%; height: 55%; }
@@ -167,12 +167,16 @@
     background: var(--bg); color: var(--green); font-weight: 700; font-size: 18px;
     white-space: nowrap; overflow: visible;
   }
-  /* Input/Output circle kết thúc ở y=176px (51.16%), Battery circle kết
-     thúc ở y=321px (93.3%) -> khung chữ phải bắt đầu SAU 2 mốc này để
-     không đè lên icon. */
+  /* Chữ Input/Output đặt PHÍA TRÊN icon (icon y 112-179, phía trên trống
+     trong cả 2 ảnh nền) để đường dọc Inverter đi thẳng từ đáy icon xuống.
+     Chữ đen gốc dưới icon (x 53-88 / 446-494, y 183-196) được che bằng
+     .io-text-patch (vẽ trước đường dọc). */
   .ups-diagram-img .lbl-bypass { top: 0%; left: 42%; width: 16%; height: 4.5%; }
-  .ups-diagram-img .lbl-input { top: 51.3%; left: 7.5%; width: 11%; height: 6.5%; }
-  .ups-diagram-img .lbl-output { top: 51.3%; left: 80.5%; width: 13%; height: 6.5%; }
+  .ups-diagram-img .lbl-input { top: 25.00%; left: 7.5%; width: 11%; height: 6.51%; }
+  .ups-diagram-img .lbl-output { top: 25.00%; left: 80.5%; width: 13%; height: 6.51%; }
+  .ups-diagram-img .io-text-patch { position: absolute; background: var(--bg); }
+  .ups-diagram-img .io-text-patch-in { left: 9.61%; top: 52.91%; width: 7.02%; height: 4.65%; }
+  .ups-diagram-img .io-text-patch-out { left: 82.26%; top: 52.91%; width: 9.43%; height: 4.65%; }
 
   /* Bố cục 4 khung thông tin nằm CẠNH sơ đồ (không xếp bên dưới nữa), giống
      bố cục gốc ViewPower: UPS trên-phải, Input trái-giữa, Output phải-giữa,
@@ -238,9 +242,9 @@
 
   /* Nhánh Grid Inverter vẽ NGAY TRONG sơ đồ (như ô Solar), cùng hệ toạ độ
      ảnh gốc 541x344 nhưng tràn xuống dưới (top > 100%) vào phần trống của ô
-     lưới "extra". Theo bản vẽ tay: Input rẽ trái xuống mép trái, Output rẽ
-     phải xuống mép phải, cả hai chạy ngang vào Inverter; Battery xuống thẳng
-     Inverter. Đường ngang dưới (y=384) cách tâm Battery (y=265.5) đúng bằng
+     lưới "extra". Theo bản vẽ tay: đường dọc đi thẳng từ đáy icon Input
+     (tâm x=69.5) và icon Output (tâm x=470.5) xuống, rẽ ngang vào Inverter;
+     Battery xuống thẳng Inverter. Đường ngang dưới (y=384) cách tâm Battery (y=265.5) đúng bằng
      đường UPS phía trên (y=147) để hàng Solar-Battery nằm giữa khung.
      Phần trống còn lại bên dưới để dành thêm thông tin sau.
      Phong cách y hệt ViewPower: đường dày 17px phủ GIF xanh gốc (downVline/
@@ -252,8 +256,7 @@
   .ups-diagram-img .inv-flow { background: #017400 no-repeat 0 0 / 100% 100%; }
   .ups-diagram-img .inv-flow.down { background-image: url(/static/ups/downVline.gif); }
   .ups-diagram-img .inv-flow.up { background-image: url(/static/ups/upVline.gif); }
-  .ups-diagram-img .inv-flow.right, .ups-diagram-img .inv-flow.left { background-image: url(/static/ups/solarline.gif); }
-  .ups-diagram-img .inv-flow.left { transform: scaleX(-1); }
+  .ups-diagram-img .inv-flow.right { background-image: url(/static/ups/solarline.gif); }
   .ups-diagram-img .inv-knob {
     background:
       linear-gradient(to right, rgba(116,115,117,.95), rgba(186,179,214,0) 22%, rgba(186,179,214,0) 78%, rgba(228,225,233,.95)),
@@ -263,17 +266,21 @@
   .ups-diagram-img .inv-circle svg { width: 55%; height: 55%; }
   .ups-diagram-img .inv-circle.off { opacity: .45; }
   .ups-diagram-img .lbl-inverter.off { color: var(--text-dim); }
-  .ups-diagram-img .inv-v-in { left: 0.55%; top: 43.60%; width: 3.14%; height: 68.02%; }
-  .ups-diagram-img .inv-v-out { left: 96.30%; top: 43.60%; width: 3.14%; height: 68.02%; }
+  .ups-diagram-img .inv-v-in { left: 11.28%; top: 51.74%; width: 3.14%; height: 59.88%; }
+  .ups-diagram-img .inv-v-out { left: 85.40%; top: 51.74%; width: 3.14%; height: 59.88%; }
   .ups-diagram-img .inv-v-bat { left: 48.43%; top: 86.63%; width: 3.14%; height: 20.06%; }
-  .ups-diagram-img .inv-h-in { left: 2.13%; top: 109.16%; width: 47.78%; height: 4.94%; }
-  .ups-diagram-img .inv-h-out { left: 50.09%; top: 109.16%; width: 47.78%; height: 4.94%; }
-  .ups-diagram-img .inv-stub-in { left: 2.03%; top: 40.41%; width: 4.62%; height: 4.94%; }
-  .ups-diagram-img .inv-stub-out { left: 93.35%; top: 40.41%; width: 4.62%; height: 4.94%; }
-  .ups-diagram-img .inv-knob-in-top { left: 0; top: 39.53%; width: 4.25%; height: 6.40%; }
-  .ups-diagram-img .inv-knob-out-top { left: 95.75%; top: 39.53%; width: 4.25%; height: 6.40%; }
-  .ups-diagram-img .inv-knob-in-bot { left: 0; top: 108.28%; width: 4.25%; height: 6.40%; }
-  .ups-diagram-img .inv-knob-out-bot { left: 95.75%; top: 108.28%; width: 4.25%; height: 6.40%; }
+  .ups-diagram-img .inv-h-in { left: 12.85%; top: 109.16%; width: 37.06%; height: 4.94%; }
+  .ups-diagram-img .inv-h-out { left: 50.09%; top: 109.16%; width: 36.88%; height: 4.94%; }
+  /* Đoạn dây lưới vào icon Input (x 0-36) và từ icon Output ra tải (x 504-540)
+     trên đường UPS — đúng vùng phủ của input.gif/output.gif gốc. Inverter
+     chạy thì cũng có điện vào/ra ở đây. Vẽ TRƯỚC ov-input/ov-output để khi
+     UPS có tín hiệu thì GIF gốc của UPS phủ lên. */
+  .ups-diagram-img .inv-io-in { left: 0; top: 40.41%; width: 6.84%; height: 4.94%; }
+  /* Dài hơn 1px ra ngoài mép ảnh: cột cuối của ảnh nền bị làm tròn nửa pixel
+     lấn ra ngoài khung, nếu không sẽ lộ 1 vạch xám ở đầu dây. */
+  .ups-diagram-img .inv-io-out { left: 93.16%; top: 40.41%; width: 7.04%; height: 4.94%; }
+  .ups-diagram-img .inv-knob-in-bot { left: 10.72%; top: 108.28%; width: 4.25%; height: 6.40%; }
+  .ups-diagram-img .inv-knob-out-bot { left: 84.84%; top: 108.28%; width: 4.25%; height: 6.40%; }
   .ups-diagram-img .inv-circle { left: 43.81%; top: 101.89%; width: 12.38%; height: 19.48%; }
   /* Chữ đặt dưới hẳn ô tròn (cách 4px) — nền chữ không đè lên icon. */
   .ups-diagram-img .lbl-inverter { left: 42.05%; top: 122.53%; width: 15.90%; height: 6.51%; }
@@ -464,14 +471,16 @@ function renderUpsSection(device, liveData, chargerLiveData, inverterDevice, inv
             <div class="ups-diagram-img">
               <img class="bg" src="/static/ups/${online ? "statusbg.png" : "statusbg_offline.png"}">
               <div class="bat-old-patch"></div>
+              <div class="io-text-patch io-text-patch-in"></div>
+              <div class="io-text-patch io-text-patch-out"></div>
               ${inverterOnline ? `
               <div class="inv-flow down inv-v-in"></div>
               <div class="inv-flow up inv-v-out"></div>
               <div class="inv-flow down inv-v-bat"></div>
               <div class="inv-flow right inv-h-in"></div>
               <div class="inv-flow right inv-h-out"></div>
-              <div class="inv-flow left inv-stub-in"></div>
-              <div class="inv-flow left inv-stub-out"></div>
+              <div class="inv-flow right inv-io-in"></div>
+              <div class="inv-flow right inv-io-out"></div>
               ` : ""}
               <!-- Bộ sạc (Rectifier) chạy độc lập với đường Bypass: hễ có điện lưới
                    (không xả ắc quy) là còn sạc AC -> Battery, kể cả khi bypass đang
@@ -498,8 +507,6 @@ function renderUpsSection(device, liveData, chargerLiveData, inverterDevice, inv
               </div>
               <div class="bat-sprite" style="background-image: url(/static/ups/${online ? "statusbg.png" : "statusbg_offline.png"})"></div>
               ${inverterOnline ? `
-              <div class="inv-knob inv-knob-in-top"></div>
-              <div class="inv-knob inv-knob-out-top"></div>
               <div class="inv-knob inv-knob-in-bot"></div>
               <div class="inv-knob inv-knob-out-bot"></div>
               ` : ""}
