@@ -128,22 +128,33 @@
   .ups-diagram-img .ov-bypass { top: 5.23%; left: 27.73%; width: 44.55%; height: 4.94%; }
   .ups-diagram-img .ov-bypass-left { top: 10.47%; left: 24.03%; width: 3.14%; height: 29.07%; }
   .ups-diagram-img .ov-bypass-right { top: 10.76%; left: 72.83%; width: 3.14%; height: 29.07%; }
+  /* Đoạn dọc nút giữa -> Battery ngắn lại 25px vì ô Battery được kéo lên. */
   .ups-diagram-img .ov-battery-charge, .ups-diagram-img .ov-battery-discharge {
-    top: 45.93%; left: 48.43%; width: 3.14%; height: 29.07%;
+    top: 45.93%; left: 48.43%; width: 3.14%; height: 21.80%;
+  }
+
+  /* Ô Battery vẽ sẵn trong statusbg.png (x 236-303, y 257-324) được kéo lên
+     25px cho gọn khoảng cách với đường UPS: che ô cũ bằng màu nền rồi cắt
+     đúng ô đó từ chính ảnh gốc (sprite) đặt ở vị trí mới. */
+  .ups-diagram-img .bat-old-patch { position: absolute; background: var(--bg); left: 43.44%; top: 74.71%; width: 12.94%; height: 25.29%; }
+  .ups-diagram-img .bat-sprite {
+    position: absolute; left: 43.62%; top: 67.44%; width: 12.57%; height: 19.77%;
+    background-repeat: no-repeat; background-size: 795.59% 505.88%; background-position: 49.894% 93.116%;
   }
 
   /* Ô tròn "Solar" (không có sẵn trong statusbg.png gốc) + đường dây ngang
-     màu trắng nối sang Battery — cùng kích thước/tâm trục với circle Input
-     (đo bằng flood-fill theo màu nền circle), chỉ đổi tầng y sang hàng
-     Battery để có thể nối thẳng 1 đường ngang. */
+     nối sang Battery — cùng kích thước với circle Input, nằm trên hàng
+     Battery, canh giữa ô trái của khung (giữa mép trong đường dọc trái
+     x=20 và đường dọc Battery x=262 trên ảnh 541px). Dây màu xám #c0bbc1
+     giống các đường chưa hoạt động của ảnh gốc. */
   .ups-diagram-img .ov-solar-line, .ups-diagram-img .ov-solar-anim {
-    top: 81.98%; left: 19.04%; width: 24.58%; height: 4.94%;
+    top: 74.71%; left: 31.79%; width: 11.83%; height: 4.94%;
   }
   .ups-diagram-img .ov-solar-line {
-    position: absolute; background: #fff; border-radius: 2px;
+    position: absolute; background: #c0bbc1;
   }
   .ups-diagram-img .solar-circle {
-    position: absolute; top: 74.71%; left: 6.65%; width: 12.38%; height: 19.48%;
+    position: absolute; top: 67.44%; left: 19.87%; width: 12.38%; height: 19.48%;
     border-radius: 50%; background: #b5aecd; display: flex; align-items: center; justify-content: center;
   }
   .ups-diagram-img .solar-circle svg { width: 55%; height: 55%; }
@@ -162,8 +173,6 @@
   .ups-diagram-img .lbl-bypass { top: 0%; left: 42%; width: 16%; height: 4.5%; }
   .ups-diagram-img .lbl-input { top: 51.3%; left: 7.5%; width: 11%; height: 6.5%; }
   .ups-diagram-img .lbl-output { top: 51.3%; left: 80.5%; width: 13%; height: 6.5%; }
-  .ups-diagram-img .lbl-battery { top: 93.5%; left: 43%; width: 14%; height: 6.5%; }
-  .ups-diagram-img .lbl-solar { top: 94.3%; left: 7.5%; width: 11%; height: 6.5%; }
 
   /* Bố cục 4 khung thông tin nằm CẠNH sơ đồ (không xếp bên dưới nữa), giống
      bố cục gốc ViewPower: UPS trên-phải, Input trái-giữa, Output phải-giữa,
@@ -174,7 +183,7 @@
     grid-template-areas:
       "input  diagram ups"
       "solar  diagram output"
-      ".      battery .";
+      ".      extra   .";
     gap: 14px;
     align-items: center;
   }
@@ -182,15 +191,28 @@
   .ups-layout .area-ups { grid-area: ups; }
   /* Đẩy ô Input xuống ~56px để mép dưới ô ngang với mép dưới biểu tượng Input. */
   .ups-layout .area-input { grid-area: input; position: relative; top: 56px; }
-  /* Đẩy ô Solar xuống ~49px (position relative không đổi layout lưới) để
-     tâm ô khớp với tâm biểu tượng Solar trong sơ đồ (84.45% chiều cao sơ đồ). */
-  .ups-layout .area-solar { grid-area: solar; position: relative; top: 49px; }
+  /* Đẩy ô Solar xuống ~58px (position relative không đổi layout lưới) để
+     cách hẳn ô Input phía trên (~26px; ô Input đã bị đẩy xuống 56px). */
+  .ups-layout .area-solar { grid-area: solar; position: relative; top: 58px; }
   .ups-layout .area-output { grid-area: output; }
-  .ups-layout .area-battery { grid-area: battery; }
+  /* Ô Inverter nằm chung ô lưới "extra" với phần sơ đồ tràn xuống, ngay dưới
+     chữ "Inverter": chữ kết thúc ở y=443.9 trên ảnh 541px, tức 99.9/541 =
+     18.47% bề rộng dưới mép ảnh; trừ khe lưới 14px, cộng 6px khoảng hở.
+     Bản gọn (padding nhỏ hơn, 1 dòng) để vừa phần trống, khung không cao thêm. */
+  .ups-layout .area-inverter {
+    grid-area: extra; align-self: start; justify-self: center; width: min(100%, 260px);
+    margin-top: calc(18.47% - 8px); padding: 10px 16px;
+  }
+  .ups-layout .area-inverter .info-title { padding-bottom: 6px; margin-bottom: 4px; }
+  /* Hàng dưới cùng trước đây là ô "Battery information" (đã bỏ): giờ là
+     khoảng trống cho phần sơ đồ Inverter tràn xuống từ ảnh UPS. Cao đúng
+     186/541 bề rộng ảnh (= 185px ở cỡ thường, bằng khe lưới + ô Battery cũ)
+     nên khung không co lại; margin âm bù khe lưới để nối liền mép ảnh. */
+  .ups-layout .area-extra { grid-area: extra; justify-self: center; width: 100%; max-width: 541px; aspect-ratio: 541 / 186; margin-top: -14px; }
   @media (max-width: 720px) {
     .ups-layout {
       grid-template-columns: 1fr;
-      grid-template-areas: "diagram" "input" "ups" "solar" "output" "battery";
+      grid-template-areas: "diagram" "extra" "input" "ups" "solar" "output";
     }
     .ups-layout .area-solar, .ups-layout .area-input { top: 0; }
   }
@@ -201,9 +223,6 @@
   .info-panel .info-title { transition: color .2s; }
   .info-panel.active .info-title { color: var(--green); }
   .info-value.charging { color: var(--green); }
-  /* Battery information hẹp lại còn 2/3 chiều rộng gốc (cột diagram), canh giữa. */
-  .ups-layout .area-battery.battery-panel { width: 66.67%; margin: 0 auto; }
-
   .info-panel { background: var(--card); border: 1px solid var(--card-border); border-radius: 14px; padding: 14px 16px; }
   .info-panel .info-title {
     font-weight: 700; font-size: 13px; text-align: center; padding-bottom: 8px; margin-bottom: 8px;
@@ -216,6 +235,48 @@
 
   .empty { color: var(--text-dim); text-align: center; margin-top: 60px; }
   .empty code { background: var(--card); padding: 2px 6px; border-radius: 6px; }
+
+  /* Nhánh Grid Inverter vẽ NGAY TRONG sơ đồ (như ô Solar), cùng hệ toạ độ
+     ảnh gốc 541x344 nhưng tràn xuống dưới (top > 100%) vào phần trống của ô
+     lưới "extra". Theo bản vẽ tay: Input rẽ trái xuống mép trái, Output rẽ
+     phải xuống mép phải, cả hai chạy ngang vào Inverter; Battery xuống thẳng
+     Inverter. Đường ngang dưới (y=384) cách tâm Battery (y=265.5) đúng bằng
+     đường UPS phía trên (y=147) để hàng Solar-Battery nằm giữa khung.
+     Phần trống còn lại bên dưới để dành thêm thông tin sau.
+     Phong cách y hệt ViewPower: đường dày 17px phủ GIF xanh gốc (downVline/
+     upVline/solarline) kéo giãn theo chiều dài đoạn, nút góc vuông tím nổi
+     khối 23x22px. Inverter mất tín hiệu thì không vẽ đường/nút nào của
+     nhánh, chỉ còn icon + chữ "Inverter" làm mờ. */
+  .ups-diagram-img .inv-flow, .ups-diagram-img .inv-knob,
+  .ups-diagram-img .inv-circle { position: absolute; }
+  .ups-diagram-img .inv-flow { background: #017400 no-repeat 0 0 / 100% 100%; }
+  .ups-diagram-img .inv-flow.down { background-image: url(/static/ups/downVline.gif); }
+  .ups-diagram-img .inv-flow.up { background-image: url(/static/ups/upVline.gif); }
+  .ups-diagram-img .inv-flow.right, .ups-diagram-img .inv-flow.left { background-image: url(/static/ups/solarline.gif); }
+  .ups-diagram-img .inv-flow.left { transform: scaleX(-1); }
+  .ups-diagram-img .inv-knob {
+    background:
+      linear-gradient(to right, rgba(116,115,117,.95), rgba(186,179,214,0) 22%, rgba(186,179,214,0) 78%, rgba(228,225,233,.95)),
+      linear-gradient(to bottom, #f3f2f5, #bab3d6 27%, #bab3d6 72%, #525154);
+  }
+  .ups-diagram-img .inv-circle { border-radius: 50%; background: #b5aecd; display: flex; align-items: center; justify-content: center; }
+  .ups-diagram-img .inv-circle svg { width: 55%; height: 55%; }
+  .ups-diagram-img .inv-circle.off { opacity: .45; }
+  .ups-diagram-img .lbl-inverter.off { color: var(--text-dim); }
+  .ups-diagram-img .inv-v-in { left: 0.55%; top: 43.60%; width: 3.14%; height: 68.02%; }
+  .ups-diagram-img .inv-v-out { left: 96.30%; top: 43.60%; width: 3.14%; height: 68.02%; }
+  .ups-diagram-img .inv-v-bat { left: 48.43%; top: 86.63%; width: 3.14%; height: 20.06%; }
+  .ups-diagram-img .inv-h-in { left: 2.13%; top: 109.16%; width: 47.78%; height: 4.94%; }
+  .ups-diagram-img .inv-h-out { left: 50.09%; top: 109.16%; width: 47.78%; height: 4.94%; }
+  .ups-diagram-img .inv-stub-in { left: 2.03%; top: 40.41%; width: 4.62%; height: 4.94%; }
+  .ups-diagram-img .inv-stub-out { left: 93.35%; top: 40.41%; width: 4.62%; height: 4.94%; }
+  .ups-diagram-img .inv-knob-in-top { left: 0; top: 39.53%; width: 4.25%; height: 6.40%; }
+  .ups-diagram-img .inv-knob-out-top { left: 95.75%; top: 39.53%; width: 4.25%; height: 6.40%; }
+  .ups-diagram-img .inv-knob-in-bot { left: 0; top: 108.28%; width: 4.25%; height: 6.40%; }
+  .ups-diagram-img .inv-knob-out-bot { left: 95.75%; top: 108.28%; width: 4.25%; height: 6.40%; }
+  .ups-diagram-img .inv-circle { left: 43.81%; top: 101.89%; width: 12.38%; height: 19.48%; }
+  /* Chữ đặt dưới hẳn ô tròn (cách 4px) — nền chữ không đè lên icon. */
+  .ups-diagram-img .lbl-inverter { left: 42.05%; top: 122.53%; width: 15.90%; height: 6.51%; }
 </style>
 </head>
 <body>
@@ -327,9 +388,11 @@ function extractMetrics(data) {
   if (data.inverter) {
     return {
       kind: "Inverter",
-      power: data.inverter.outputPower,
-      today: data.inverter.energyToday,
-      total: data.inverter.energyTotal,
+      // Grid inverter hoà lưới, không phải năng lượng mặt trời vào ắc quy
+      // -> không cộng vào tổng công suất/điện năng hệ thống (chỉ tính MPPT).
+      power: null,
+      today: null,
+      total: null,
       temp: data.inverter.temperature,
       status: data.inverter.statusText,
     };
@@ -355,28 +418,35 @@ function extractMetrics(data) {
 
 // Sơ đồ UPS đầy đủ (giống hệt bố cục ViewPower gốc), hiển thị trực tiếp
 // trên trang tổng quan — không cần vào trang chi tiết.
-function renderUpsSection(device, liveData, chargerLiveData) {
+function renderUpsSection(device, liveData, chargerLiveData, inverterDevice, inverterLiveData) {
   const online = !!(liveData && liveData.hasData && liveData.ups);
   const name = (liveData && liveData._name) || device.device_id;
   const payload = online ? liveData.ups : {};
   const statusLabel = online ? friendlyStatus("Ups", payload.statusText, payload) : "Mất kết nối";
-  const bypass = !!payload.bypassActive;
-  const onBattery = !!payload.onBattery;
+  // ViewPower vẫn phản hồi (hasData) nhưng UPS không liên lạc được thì
+  // workMode rỗng và mọi số đo 0/null — onBattery lúc đó chỉ do inputVoltage=0
+  // suy ra nên sai. Không có tín hiệu UPS thì không vẽ đường nào đi qua UPS.
+  const upsSignal = online && !!payload.workMode;
+  const bypass = upsSignal && !!payload.bypassActive;
+  const onBattery = upsSignal && !!payload.onBattery;
   // Dữ liệu sạc pin từ MPPT Charger (thiết bị khác) — chỉ dùng cho ô "Solar
   // information", vì UPS và Charger dùng chung 1 bộ ắc quy.
   const solar = (chargerLiveData && chargerLiveData.hasData && chargerLiveData.charger) || null;
   const solarCharging = !!(solar && solar.batCurrent > 0);
-  const outputActive = (payload.load || 0) > 0;
 
-  // Dòng xả ắc quy (khi là số ước tính P/(hiệu suất×V)) chỉ phản ánh dòng
-  // inverter rút ra — nếu solar đang đồng thời sạc vào cùng bộ ắc quy đó,
-  // phần dòng xả thực (net) giảm đi đúng bằng dòng sạc solar (KCL tại cực
-  // ắc quy); dòng đo trực tiếp thật (không estimated) đã tự là dòng net rồi
-  // nên không cộng/trừ gì thêm.
-  let dischargeCurrent = payload.dischargeCurrent;
-  if (payload.dischargeCurrentEstimated && dischargeCurrent != null && solarCharging) {
-    dischargeCurrent = Math.max(0, dischargeCurrent - solar.batCurrent);
-  }
+  // Nhánh Grid Inverter (thiết bị hoà lưới riêng, không phải UPS): khi có
+  // tín hiệu, nó đảm nhận vai trò tạo ra Output thay cho UPS -> Output V/A
+  // ở ô "Output information" lấy từ đây thay vì từ payload UPS.
+  const hasInverterDevice = !!inverterDevice;
+  const inverterOnline = !!(inverterLiveData && inverterLiveData.hasData && inverterLiveData.inverter);
+  const inverterPayload = inverterOnline ? inverterLiveData.inverter : {};
+  const outputVoltage = inverterOnline ? inverterPayload.acVoltage : payload.outputVoltage;
+  const outputCurrent = inverterOnline
+    ? (inverterPayload.acVoltage ? inverterPayload.outputPower / inverterPayload.acVoltage : null)
+    : payload.outputCurrent;
+  const outputActive = (payload.load || 0) > 0 || (inverterOnline && (inverterPayload.outputPower || 0) > 0);
+  // Không có tín hiệu UPS thì lấy điện áp lưới từ Grid Inverter (acVoltage).
+  const inputVoltage = upsSignal ? payload.inputVoltage : (inverterOnline ? inverterPayload.acVoltage : null);
 
   return `
     <div class="ups-section ${online ? "" : "offline"}">
@@ -393,20 +463,30 @@ function renderUpsSection(device, liveData, chargerLiveData) {
           <div class="area-diagram">
             <div class="ups-diagram-img">
               <img class="bg" src="/static/ups/${online ? "statusbg.png" : "statusbg_offline.png"}">
+              <div class="bat-old-patch"></div>
+              ${inverterOnline ? `
+              <div class="inv-flow down inv-v-in"></div>
+              <div class="inv-flow up inv-v-out"></div>
+              <div class="inv-flow down inv-v-bat"></div>
+              <div class="inv-flow right inv-h-in"></div>
+              <div class="inv-flow right inv-h-out"></div>
+              <div class="inv-flow left inv-stub-in"></div>
+              <div class="inv-flow left inv-stub-out"></div>
+              ` : ""}
               <!-- Bộ sạc (Rectifier) chạy độc lập với đường Bypass: hễ có điện lưới
                    (không xả ắc quy) là còn sạc AC -> Battery, kể cả khi bypass đang
                    bật (bypass chỉ thay đường ra Output, không tắt bộ sạc). -->
-              <img class="ov-input ${online && !onBattery ? "show" : ""}" src="/static/ups/input.gif">
+              <img class="ov-input ${upsSignal && !onBattery ? "show" : ""}" src="/static/ups/input.gif">
               <!-- Đường ra Output: bypass bật -> đi thẳng (đoạn ngắn outputbypass,
                    không qua Inverter); bypass tắt -> qua Inverter (đoạn đầy đủ). -->
-              <img class="ov-output ${online && !bypass ? "show" : ""}" src="/static/ups/output.gif">
+              <img class="ov-output ${upsSignal && !bypass ? "show" : ""}" src="/static/ups/output.gif">
               <img class="ov-output-bypass ${bypass ? "show" : ""}" src="/static/ups/outputbypass.gif">
               <img class="ov-bypass ${bypass ? "show" : ""}" src="/static/ups/bypass.gif">
               <img class="ov-bypass-left ${bypass ? "show" : ""}" src="/static/ups/upVline.gif">
               <img class="ov-bypass-right ${bypass ? "show" : ""}" src="/static/ups/bypassdownVline.gif">
               <!-- Có input (không xả ắc quy) -> luôn có nhánh sạc ắc quy (chiều xuống);
                    đang xả (mất điện lưới) -> đổi sang chiều lên (upVline.gif dùng lại). -->
-              <img class="ov-battery-charge ${online && !onBattery ? "show" : ""}" src="/static/ups/downVline.gif">
+              <img class="ov-battery-charge ${upsSignal && !onBattery ? "show" : ""}" src="/static/ups/downVline.gif">
               <img class="ov-battery-discharge ${onBattery ? "show" : ""}" src="/static/ups/upVline.gif">
               <div class="ov-solar-line"></div>
               <!-- Dùng lại đúng downVline.gif (xoay ngang 90°) thay vì tự vẽ animation
@@ -416,17 +496,28 @@ function renderUpsSection(device, liveData, chargerLiveData) {
               <div class="solar-circle">
                 <svg viewBox="0 0 24 24" fill="none" stroke="#231815" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
               </div>
+              <div class="bat-sprite" style="background-image: url(/static/ups/${online ? "statusbg.png" : "statusbg_offline.png"})"></div>
+              ${inverterOnline ? `
+              <div class="inv-knob inv-knob-in-top"></div>
+              <div class="inv-knob inv-knob-out-top"></div>
+              <div class="inv-knob inv-knob-in-bot"></div>
+              <div class="inv-knob inv-knob-out-bot"></div>
+              ` : ""}
+              ${hasInverterDevice ? `
+              <div class="inv-circle ${inverterOnline ? "" : "off"}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#231815" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5M4 7h6M4 10.5h6M12.5 16.5c1.2-2.2 2.4-2.2 3.6 0s2.4 2.2 3.6 0"/></svg>
+              </div>
+              <div class="label-patch lbl-inverter ${inverterOnline ? "" : "off"}">Inverter</div>
+              ` : ""}
               <div class="label-patch lbl-bypass">Bypass</div>
               <div class="label-patch lbl-input">Input</div>
               <div class="label-patch lbl-output">Output</div>
-              <div class="label-patch lbl-battery">Battery</div>
-              <div class="label-patch lbl-solar">Solar</div>
             </div>
           </div>
 
           <div class="area-input info-panel">
             <div class="info-title">Input information</div>
-            <div class="info-row"><span class="info-label">Input voltage</span><span class="info-value">${fmt(payload.inputVoltage, 1)}<span class="unit">V</span></span></div>
+            <div class="info-row"><span class="info-label">Input voltage</span><span class="info-value">${fmt(inputVoltage, 1)}<span class="unit">V</span></span></div>
             <div class="info-row"><span class="info-label">Input frequency</span><span class="info-value">${fmt(payload.inputFrequency, 1)}<span class="unit">Hz</span></span></div>
           </div>
           <div class="area-ups info-panel ${online ? "active" : ""}">
@@ -444,19 +535,19 @@ function renderUpsSection(device, liveData, chargerLiveData) {
           </div>
           <div class="area-output info-panel ${outputActive ? "active" : ""}">
             <div class="info-title">Output information</div>
-            <div class="info-row"><span class="info-label">Output voltage</span><span class="info-value">${fmt(payload.outputVoltage, 1)}<span class="unit">V</span></span></div>
+            <div class="info-row"><span class="info-label">Output voltage</span><span class="info-value">${fmt(outputVoltage, 1)}<span class="unit">V</span></span></div>
             <div class="info-row"><span class="info-label">Output frequency</span><span class="info-value">${fmt(payload.outputFrequency, 1)}<span class="unit">Hz</span></span></div>
             <div class="info-row"><span class="info-label">Load level</span><span class="info-value">${fmt(payload.load, 0)}<span class="unit">%</span></span></div>
-            <div class="info-row"><span class="info-label">Power consumption</span><span class="info-value">${fmt(payload.loadWatts, 0)}<span class="unit">W</span></span></div>
-            <div class="info-row"><span class="info-label">Current</span><span class="info-value">${fmt(payload.outputCurrent, 1)}<span class="unit">A</span></span></div>
+            <div class="info-row"><span class="info-label">Power consumption</span><span class="info-value">${fmt(inverterOnline ? inverterPayload.outputPower : payload.loadWatts, 0)}<span class="unit">W</span></span></div>
+            <div class="info-row"><span class="info-label">Current</span><span class="info-value">${fmt(outputCurrent, 1)}<span class="unit">A</span></span></div>
           </div>
-          <div class="area-battery info-panel battery-panel ${solarCharging ? "active" : ""}">
-            <div class="info-title">Battery information</div>
-            <div class="info-row"><span class="info-label">Battery voltage</span><span class="info-value">${fmt(payload.batteryVoltage, 1)}<span class="unit">V</span></span></div>
-            <div class="info-row"><span class="info-label">Discharge current${payload.dischargeCurrentEstimated ? " (estimated)" : ""}</span><span class="info-value ${solarCharging ? "charging" : ""}">${payload.dischargeCurrentEstimated ? "≈" : ""}${fmt(dischargeCurrent, 1)}<span class="unit">A</span></span></div>
-            <div class="info-row"><span class="info-label">Battery capacity</span><span class="info-value">${fmt(payload.batteryCharge, 0)}<span class="unit">%</span></span></div>
-            <div class="info-row"><span class="info-label">Remaining backup time</span><span class="info-value">${fmt(payload.batteryRuntimeMin, 0)}<span class="unit">Min</span></span></div>
+          ${hasInverterDevice ? `
+          <div class="area-extra"></div>
+          <div class="area-inverter info-panel ${inverterOnline ? "active" : ""}">
+            <div class="info-title">Inverter information</div>
+            <div class="info-row"><span class="info-label">Grid power</span><span class="info-value">${fmt(inverterPayload.limiterPower, 0)}<span class="unit">W</span></span></div>
           </div>
+          ` : ""}
         </div>
       </div>
     </div>
@@ -528,12 +619,19 @@ async function tick() {
 
   const isUps = (d) => d.device_type === "UPS" || !!(statusMap[d.device_id] && statusMap[d.device_id].ups);
   const isCharger = (d) => !!(statusMap[d.device_id] && statusMap[d.device_id].charger);
+  const isInverter = (d) => !!(statusMap[d.device_id] && statusMap[d.device_id].inverter);
   const upsDevices = devices.filter(isUps);
   const chargerDevices = devices.filter(isCharger);
+  const inverterDevices = devices.filter(isInverter);
   const mpptDevice = chargerDevices[0]; // dùng để lấy dữ liệu sạc cho ô "Solar information" của UPS
+  const inverterDevice = inverterDevices[0]; // nhánh Grid Inverter vẽ thêm trong khung UPS
 
   document.getElementById("upsSection").innerHTML =
-    upsDevices.map(d => renderUpsSection(d, statusMap[d.device_id], mpptDevice ? statusMap[mpptDevice.device_id] : null)).join("");
+    upsDevices.map(d => renderUpsSection(
+      d, statusMap[d.device_id],
+      mpptDevice ? statusMap[mpptDevice.device_id] : null,
+      inverterDevice, inverterDevice ? statusMap[inverterDevice.device_id] : null
+    )).join("");
 
   document.getElementById("upsSection").style.display = upsDevices.length ? "block" : "none";
 }
