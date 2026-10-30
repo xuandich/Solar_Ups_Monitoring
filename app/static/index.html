@@ -205,9 +205,10 @@
      Bản gọn (padding nhỏ hơn, 1 dòng) để vừa phần trống, khung không cao thêm. */
   .ups-layout .area-inverter {
     grid-area: extra; align-self: start; justify-self: center; width: min(100%, 260px);
-    margin-top: calc(18.47% - 8px); padding: 10px 16px;
+    margin-top: calc(18.47% - 8px); padding: 6px 16px;
   }
-  .ups-layout .area-inverter .info-title { padding-bottom: 6px; margin-bottom: 4px; }
+  .ups-layout .area-inverter .info-title { padding-bottom: 4px; margin-bottom: 2px; }
+  .ups-layout .area-inverter .info-row { padding: 2px 0; }
   /* Hàng dưới cùng trước đây là ô "Battery information" (đã bỏ): giờ là
      khoảng trống cho phần sơ đồ Inverter tràn xuống từ ảnh UPS. Cao đúng
      186/541 bề rộng ảnh (= 185px ở cỡ thường, bằng khe lưới + ô Battery cũ)
@@ -254,6 +255,9 @@
   .ups-diagram-img .inv-flow, .ups-diagram-img .inv-knob,
   .ups-diagram-img .inv-circle { position: absolute; }
   .ups-diagram-img .inv-flow { background: #017400 no-repeat 0 0 / 100% 100%; }
+  /* Inverter đang có tín hiệu nhưng không phát (outputPower = 0): đoạn
+     Battery -> Inverter vẫn vẽ nhưng xám như đường chưa hoạt động của UPS. */
+  .ups-diagram-img .inv-track { position: absolute; background: #c0bbc1; }
   .ups-diagram-img .inv-flow.down { background-image: url(/static/ups/downVline.gif); }
   .ups-diagram-img .inv-flow.up { background-image: url(/static/ups/upVline.gif); }
   .ups-diagram-img .inv-flow.right { background-image: url(/static/ups/solarline.gif); }
@@ -448,9 +452,15 @@ function renderUpsSection(device, liveData, chargerLiveData, inverterDevice, inv
   const inverterOnline = !!(inverterLiveData && inverterLiveData.hasData && inverterLiveData.inverter);
   const inverterPayload = inverterOnline ? inverterLiveData.inverter : {};
   const outputVoltage = inverterOnline ? inverterPayload.acVoltage : payload.outputVoltage;
-  const outputCurrent = inverterOnline
-    ? (inverterPayload.acVoltage ? inverterPayload.outputPower / inverterPayload.acVoltage : null)
-    : payload.outputCurrent;
+  // Không có UPS: tải thực = phần Inverter phát (outputPower) + phần lấy từ
+  // lưới đo ở limiter (limiterPower) — 2 số bù trừ nhau, tổng gần như không
+  // đổi. Inverter không báo dòng điện nên dòng tải = tải thực / acVoltage.
+  const loadPower = upsSignal
+    ? payload.loadWatts
+    : (inverterOnline ? (inverterPayload.outputPower || 0) + (inverterPayload.limiterPower || 0) : null);
+  const outputCurrent = upsSignal
+    ? payload.outputCurrent
+    : (loadPower != null && inverterPayload.acVoltage ? loadPower / inverterPayload.acVoltage : null);
   const outputActive = (payload.load || 0) > 0 || (inverterOnline && (inverterPayload.outputPower || 0) > 0);
   // Không có tín hiệu UPS thì lấy điện áp lưới từ Grid Inverter (acVoltage).
   const inputVoltage = upsSignal ? payload.inputVoltage : (inverterOnline ? inverterPayload.acVoltage : null);
@@ -476,7 +486,7 @@ function renderUpsSection(device, liveData, chargerLiveData, inverterDevice, inv
               ${inverterOnline ? `
               <div class="inv-flow down inv-v-in"></div>
               <div class="inv-flow up inv-v-out"></div>
-              <div class="inv-flow down inv-v-bat"></div>
+              <div class="${(inverterPayload.outputPower || 0) > 0 ? "inv-flow down" : "inv-track"} inv-v-bat"></div>
               <div class="inv-flow right inv-h-in"></div>
               <div class="inv-flow right inv-h-out"></div>
               <div class="inv-flow right inv-io-in"></div>
@@ -545,13 +555,14 @@ function renderUpsSection(device, liveData, chargerLiveData, inverterDevice, inv
             <div class="info-row"><span class="info-label">Output voltage</span><span class="info-value">${fmt(outputVoltage, 1)}<span class="unit">V</span></span></div>
             <div class="info-row"><span class="info-label">Output frequency</span><span class="info-value">${fmt(payload.outputFrequency, 1)}<span class="unit">Hz</span></span></div>
             <div class="info-row"><span class="info-label">Load level</span><span class="info-value">${fmt(payload.load, 0)}<span class="unit">%</span></span></div>
-            <div class="info-row"><span class="info-label">Power consumption</span><span class="info-value">${fmt(inverterOnline ? inverterPayload.outputPower : payload.loadWatts, 0)}<span class="unit">W</span></span></div>
+            <div class="info-row"><span class="info-label">Power consumption</span><span class="info-value">${fmt(loadPower, 0)}<span class="unit">W</span></span></div>
             <div class="info-row"><span class="info-label">Current</span><span class="info-value">${fmt(outputCurrent, 1)}<span class="unit">A</span></span></div>
           </div>
           ${hasInverterDevice ? `
           <div class="area-extra"></div>
           <div class="area-inverter info-panel ${inverterOnline ? "active" : ""}">
             <div class="info-title">Inverter information</div>
+            <div class="info-row"><span class="info-label">Output power</span><span class="info-value">${fmt(inverterPayload.outputPower, 0)}<span class="unit">W</span></span></div>
             <div class="info-row"><span class="info-label">Grid power</span><span class="info-value">${fmt(inverterPayload.limiterPower, 0)}<span class="unit">W</span></span></div>
           </div>
           ` : ""}
